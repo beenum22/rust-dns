@@ -27,7 +27,7 @@ fn main() {
                 println!("Received {} bytes from {}", size, source);
                 let mut response = BytesMut::new();
                 let header = Header::new(1234, 1, 0, 0, 0, true, 0, false, false, false, false, 0, 0);
-                let question = Question::new(vec!["codecrafters.io".to_string()], 1, 1);
+                let question = Question::new("codecrafters.io".to_string(), 1, 1);
                 response.extend_from_slice(&Bytes::from(header));
                 response.extend_from_slice(&Bytes::from(question));
                 udp_socket

@@ -85,12 +85,16 @@ pub(crate) struct Question {
 }
 
 impl Question {
-    pub(crate) fn new(qname: Vec<String>, qtype: u16, qclass: u16) -> Self {
+    pub(crate) fn new(qname: String, qtype: u16, qclass: u16) -> Self {
+        let mut labels = Vec::new();
+        for label in qname.split('.') {
+            labels.push(QuestionLabel {
+                content: label.to_string(),
+                length: label.len() as u8,
+            });
+        }
         Question {
-            qname: qname.into_iter().map(|name| QuestionLabel {
-                length: name.len() as u8,
-                content: name,
-            }).collect(),
+            qname: labels,
             qtype: QuestionType::from(qtype),
             qclass: QuestionClass::from(qclass),
         }
@@ -164,11 +168,17 @@ mod question_tests {
 
     #[test]
     fn test_new() {
-        let question = Question::new(vec!["codecrafters.io".to_string()], 1, 1);
-        assert_eq!(question.qname, vec![QuestionLabel {
-            content: "codecrafters.io".to_string(),
-            length: 15,
-        }]);
+        let question = Question::new("codecrafters.io".to_string(), 1, 1);
+        assert_eq!(question.qname, vec![
+            QuestionLabel {
+                content: "codecrafters".to_string(),
+                length: 12,
+            },
+            QuestionLabel {
+                content: "io".to_string(),
+                length: 2,
+            },
+        ]);
         assert_eq!(question.qtype, QuestionType::A);
         assert_eq!(question.qclass, QuestionClass::IN);
     }
@@ -197,7 +207,6 @@ mod question_tests {
             qtype: QuestionType::A,
             qclass: QuestionClass::IN,
         };
-
-        assert_eq!(Bytes::from(question), Bytes::from(bytes_sample.to_vec()));
+        assert_eq!(Bytes::from(question).as_ref(), bytes_sample);
     }
 }
