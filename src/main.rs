@@ -2,8 +2,11 @@
 use std::net::UdpSocket;
 
 mod header;
-use bytes::Bytes;
+mod question;
+
+use bytes::{Bytes, BytesMut};
 use header::Header;
+use question::Question;
 
 enum PacketType {
     Query,
@@ -22,7 +25,11 @@ fn main() {
         match udp_socket.recv_from(&mut buf) {
             Ok((size, source)) => {
                 println!("Received {} bytes from {}", size, source);
-                let response = Bytes::from(Header::new(1234, 0, 0, 0, 0, true, 0, false, false, false, false, 0, 0));
+                let mut response = BytesMut::new();
+                let header = Header::new(1234, 1, 0, 0, 0, true, 0, false, false, false, false, 0, 0);
+                let question = Question::new(vec!["codecrafters.io".to_string()], 1, 1);
+                response.extend_from_slice(&Bytes::from(header));
+                response.extend_from_slice(&Bytes::from(question));
                 udp_socket
                     .send_to(&response, source)
                     .expect("Failed to send response");

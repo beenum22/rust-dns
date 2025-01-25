@@ -56,7 +56,7 @@ impl From<Header> for Bytes {
 }
 
 #[cfg(test)]
-mod tests {
+mod header_tests {
     use super::*;
 
     #[test]
