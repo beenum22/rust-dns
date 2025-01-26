@@ -1,7 +1,7 @@
 use bytes::{Bytes, BytesMut};
 
 #[derive(Debug, PartialEq)]
-enum QuestionType {
+pub(crate) enum QuestionType {
     A,
     AAAA,
     NS,
@@ -38,7 +38,7 @@ impl From<u16> for QuestionType {
 }
 
 #[derive(Debug, PartialEq)]
-enum QuestionClass {
+pub(crate) enum QuestionClass {
     IN,
     CS,
     CH,
@@ -73,13 +73,13 @@ impl From<u16> for QuestionClass {
 }
 
 #[derive(Debug, PartialEq)]
-struct QuestionLabel {
-    content: String,
-    length: u8,
+pub(crate) struct LabelSequence {
+    pub(crate) content: String,
+    pub(crate) length: u8,
 }
 
 pub(crate) struct Question {
-    qname: Vec<QuestionLabel>,
+    qname: Vec<LabelSequence>,
     qtype: QuestionType,
     qclass: QuestionClass,
 }
@@ -88,7 +88,7 @@ impl Question {
     pub(crate) fn new(qname: String, qtype: u16, qclass: u16) -> Self {
         let mut labels = Vec::new();
         for label in qname.split('.') {
-            labels.push(QuestionLabel {
+            labels.push(LabelSequence {
                 content: label.to_string(),
                 length: label.len() as u8,
             });
@@ -170,11 +170,11 @@ mod question_tests {
     fn test_new() {
         let question = Question::new("codecrafters.io".to_string(), 1, 1);
         assert_eq!(question.qname, vec![
-            QuestionLabel {
+            LabelSequence {
                 content: "codecrafters".to_string(),
                 length: 12,
             },
-            QuestionLabel {
+            LabelSequence {
                 content: "io".to_string(),
                 length: 2,
             },
@@ -191,15 +191,15 @@ mod question_tests {
 
         let question = Question {
             qname: vec![
-                QuestionLabel {
+                LabelSequence {
                     content: "www".to_string(),
                     length: 3,
                 },
-                QuestionLabel {
+                LabelSequence {
                     content: "test".to_string(),
                     length: 4,
                 },
-                QuestionLabel {
+                LabelSequence {
                     content: "com".to_string(),
                     length: 3,
                 },
