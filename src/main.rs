@@ -4,12 +4,14 @@ mod header;
 mod parser;
 mod question;
 
-use answer::Answer;
+use std::net::Ipv4Addr;
+
 use bytes::{Bytes, BytesMut};
 use futures::{SinkExt, StreamExt};
 use header::Header;
 use parser::{Parser, UdpPacket};
-use question::Question;
+use question::{Question, QuestionType, QuestionClass};
+use answer::{RData, Answer};
 use tokio::net::UdpSocket;
 use tokio_util::udp::UdpFramed;
 
@@ -36,7 +38,6 @@ async fn main() {
             Some(val) => match val {
                 Ok((packet, source)) => {
                     println!("Received {:?} packet from {}", packet, source);
-                    let mut response = BytesMut::new();
                     let rcode = match packet.header.opcode {
                         0 => 0,
                         _ => 4,
@@ -56,18 +57,19 @@ async fn main() {
                         0,
                         rcode,
                     );
-                    let question = Question::new("codecrafters.io".to_string(), 1, 1);
-                    let answer = Answer::new(
-                        "codecrafters.io".to_string(),
-                        1,
-                        1,
-                        3600,
-                        4,
-                        String::from("127.0.0.1"),
-                    );
-                    // response.extend_from_slice(&Bytes::from(header));
-                    // response.extend_from_slice(&Bytes::from(question));
-                    // response.extend_from_slice(&Bytes::from(answer));
+                    let question = Question {
+                        qname: packet.question.qname.clone(),
+                        qtype: QuestionType::A,
+                        qclass: QuestionClass::IN,
+                    };
+                    let answer = Answer {
+                        name: packet.question.qname.clone(),
+                        typ: QuestionType::A,
+                        class: QuestionClass::IN,
+                        ttl: 3600,
+                        length: 4,
+                        data: RData::A(Ipv4Addr::new(8, 8, 8, 8)),
+                    };
                     if let Err(er) = sink
                         .send((
                             UdpPacket {
@@ -81,7 +83,6 @@ async fn main() {
                     {
                         eprintln!("Error sending data: {}", er);
                     }
-                    // sink.send_all((response.freeze(), source)).await.unwrap();
                 }
                 Err(e) => {
                     eprintln!("Error receiving data: {}", e);

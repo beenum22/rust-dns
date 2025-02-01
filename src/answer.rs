@@ -4,7 +4,7 @@ use crate::question::{LabelSequence, QuestionClass, QuestionType};
 use std::net::Ipv4Addr;
 
 #[derive(Debug, PartialEq)]
-enum RData {
+pub(crate) enum RData {
     A(Ipv4Addr),
 }
 
@@ -28,12 +28,12 @@ impl From<String> for RData {
 
 #[derive(Debug, PartialEq)]
 pub(crate) struct Answer {
-    name: Vec<LabelSequence>,
-    typ: QuestionType,
-    class: QuestionClass,
-    ttl: u32,
-    length: u16,
-    data: RData,
+    pub(crate) name: Vec<LabelSequence>,
+    pub(crate) typ: QuestionType,
+    pub(crate) class: QuestionClass,
+    pub(crate) ttl: u32,
+    pub(crate) length: u16,
+    pub(crate) data: RData,
 }
 
 impl Answer {

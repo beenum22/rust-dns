@@ -1,6 +1,6 @@
 use bytes::{Bytes, BytesMut};
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub(crate) enum QuestionType {
     A,
     AAAA,
@@ -37,7 +37,7 @@ impl From<u16> for QuestionType {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub(crate) enum QuestionClass {
     IN,
     CS,
@@ -72,7 +72,7 @@ impl From<u16> for QuestionClass {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub(crate) struct LabelSequence {
     pub(crate) content: String,
     pub(crate) length: u8,
@@ -87,11 +87,11 @@ impl LabelSequence {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub(crate) struct Question {
-    qname: Vec<LabelSequence>,
-    qtype: QuestionType,
-    qclass: QuestionClass,
+    pub(crate) qname: Vec<LabelSequence>,
+    pub(crate) qtype: QuestionType,
+    pub(crate) qclass: QuestionClass,
 }
 
 impl Question {
