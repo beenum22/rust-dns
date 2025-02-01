@@ -1,6 +1,6 @@
 use bytes::{Bytes, BytesMut};
 
-use crate::question::{LabelSequence, QuestionType, QuestionClass};
+use crate::question::{LabelSequence, QuestionClass, QuestionType};
 use std::net::Ipv4Addr;
 
 #[derive(Debug, PartialEq)]
@@ -37,7 +37,14 @@ pub(crate) struct Answer {
 }
 
 impl Answer {
-    pub(crate) fn new(name: String, typ: u16, class: u16, ttl: u32, length: u16, data: String) -> Self {
+    pub(crate) fn new(
+        name: String,
+        typ: u16,
+        class: u16,
+        ttl: u32,
+        length: u16,
+        data: String,
+    ) -> Self {
         let mut labels = Vec::new();
         for label in name.split('.') {
             labels.push(LabelSequence {
@@ -81,42 +88,66 @@ mod answer_tests {
 
     #[test]
     fn test_rdata_from_string() {
-        assert_eq!(RData::from(String::from("127.0.0.1")), RData::A(Ipv4Addr::new(127, 0, 0, 1)));
+        assert_eq!(
+            RData::from(String::from("127.0.0.1")),
+            RData::A(Ipv4Addr::new(127, 0, 0, 1))
+        );
     }
-    
+
     #[test]
     fn test_bytes_from_rdata() {
-        assert_eq!(Bytes::from(RData::A(Ipv4Addr::new(127, 0, 0, 1))), Bytes::from_static(&[127, 0, 0, 1]));
+        assert_eq!(
+            Bytes::from(RData::A(Ipv4Addr::new(127, 0, 0, 1))),
+            Bytes::from_static(&[127, 0, 0, 1])
+        );
     }
 
     #[test]
     fn test_answer_new() {
-        let answer = Answer::new("codecrafters.io".to_string(), 1, 1, 3600, 4, "127.0.0.1".to_string());
-        assert_eq!(answer, Answer {
-            name: vec![
-                LabelSequence {
-                    content: "codecrafters".to_string(),
-                    length: 12,
-                },
-                LabelSequence {
-                    content: "io".to_string(),
-                    length: 2,
-                },
-            ],
-            typ: QuestionType::A,
-            class: QuestionClass::IN,
-            ttl: 3600,
-            length: 4,
-            data: RData::A(Ipv4Addr::new(127, 0, 0, 1)),
-        });
+        let answer = Answer::new(
+            "codecrafters.io".to_string(),
+            1,
+            1,
+            3600,
+            4,
+            "127.0.0.1".to_string(),
+        );
+        assert_eq!(
+            answer,
+            Answer {
+                name: vec![
+                    LabelSequence {
+                        content: "codecrafters".to_string(),
+                        length: 12,
+                    },
+                    LabelSequence {
+                        content: "io".to_string(),
+                        length: 2,
+                    },
+                ],
+                typ: QuestionType::A,
+                class: QuestionClass::IN,
+                ttl: 3600,
+                length: 4,
+                data: RData::A(Ipv4Addr::new(127, 0, 0, 1)),
+            }
+        );
     }
 
     #[test]
     fn test_answer_to_bytes() {
         let bytes_sample: [u8; 28] = [
-            3, 119, 119, 119, 4, 116, 101, 115, 116, 3, 99, 111, 109, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 4, 127, 0, 0, 1
+            3, 119, 119, 119, 4, 116, 101, 115, 116, 3, 99, 111, 109, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0,
+            4, 127, 0, 0, 1,
         ];
-        let answer = Answer::new("www.test.com".to_string(), 1, 1, 0, 4, "127.0.0.1".to_string());
+        let answer = Answer::new(
+            "www.test.com".to_string(),
+            1,
+            1,
+            0,
+            4,
+            "127.0.0.1".to_string(),
+        );
         let bytes = Bytes::from(answer);
         assert_eq!(bytes, Bytes::copy_from_slice(&bytes_sample));
     }

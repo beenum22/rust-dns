@@ -18,7 +18,21 @@ pub(crate) struct Header {
 }
 
 impl Header {
-    pub(crate) fn new(id: u16, qdcount: u16, ancount: u16, nscount: u16, arcount: u16, qr: bool, opcode: u8, aa: bool, tc: bool, rd: bool, ra: bool, z: u8, rcode: u8) -> Self {
+    pub(crate) fn new(
+        id: u16,
+        qdcount: u16,
+        ancount: u16,
+        nscount: u16,
+        arcount: u16,
+        qr: bool,
+        opcode: u8,
+        aa: bool,
+        tc: bool,
+        rd: bool,
+        ra: bool,
+        z: u8,
+        rcode: u8,
+    ) -> Self {
         Header {
             id,
             qdcount,
@@ -35,7 +49,6 @@ impl Header {
             rcode,
         }
     }
-    
 }
 
 impl From<Header> for Bytes {
@@ -43,11 +56,15 @@ impl From<Header> for Bytes {
         let mut bytes = BytesMut::with_capacity(12);
         bytes.extend_from_slice(&value.id.to_be_bytes());
         bytes.extend_from_slice(
-            &((value.qr as u8) << 7 | value.opcode << 3 | (value.aa as u8) << 2 | (value.tc as u8) << 1 | (value.rd as u8) ).to_be_bytes(),
+            &((value.qr as u8) << 7
+                | value.opcode << 3
+                | (value.aa as u8) << 2
+                | (value.tc as u8) << 1
+                | (value.rd as u8))
+                .to_be_bytes(),
         );
-        bytes.extend_from_slice(
-            &((value.ra as u8) << 7 | value.z << 4 | value.rcode).to_be_bytes(),
-        );
+        bytes
+            .extend_from_slice(&((value.ra as u8) << 7 | value.z << 4 | value.rcode).to_be_bytes());
         bytes.extend_from_slice(&value.qdcount.to_be_bytes());
         bytes.extend_from_slice(&value.ancount.to_be_bytes());
         bytes.extend_from_slice(&value.nscount.to_be_bytes());
@@ -125,6 +142,9 @@ mod header_tests {
             z: 0,
             rcode: 0,
         };
-        assert_eq!(Header::from(Bytes::copy_from_slice(&bytes_sample)), header_sample);
+        assert_eq!(
+            Header::from(Bytes::copy_from_slice(&bytes_sample)),
+            header_sample
+        );
     }
 }

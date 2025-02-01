@@ -34,7 +34,7 @@ impl From<u16> for QuestionType {
             12 => QuestionType::PTR,
             _ => panic!("Invalid QuestionType"),
         }
-    }   
+    }
 }
 
 #[derive(Debug, PartialEq)]
@@ -109,7 +109,6 @@ impl Question {
             qclass: QuestionClass::from(qclass),
         }
     }
-    
 }
 
 impl From<Question> for Bytes {
@@ -136,8 +135,8 @@ impl From<Bytes> for Question {
             let mut content = String::new();
             let length = value[index] as usize;
             index += 1;
-            content.push_str(std::str::from_utf8(&value[index..index + length]).unwrap());  // TODO: Handle errors here
-            // content.push_str(".");
+            content.push_str(std::str::from_utf8(&value[index..index + length]).unwrap()); // TODO: Handle errors here
+                                                                                           // content.push_str(".");
             labels.push(LabelSequence {
                 content,
                 length: length as u8,
@@ -146,7 +145,7 @@ impl From<Bytes> for Question {
         }
         index += 1;
 
-        if value.len() > index && value[index ..].len() != 4 {
+        if value.len() > index && value[index..].len() != 4 {
             panic!("Invalid Question length");
         };
         let qtype = QuestionType::from(u16::from_be_bytes([value[index], value[index + 1]]));
@@ -186,9 +185,15 @@ mod question_type_tests {
     #[test]
     fn test_from_question_type_to_bytes() {
         assert_eq!(Bytes::from(QuestionType::A), Bytes::from_static(&[0, 1]));
-        assert_eq!(Bytes::from(QuestionType::AAAA), Bytes::from_static(&[0, 28]));
+        assert_eq!(
+            Bytes::from(QuestionType::AAAA),
+            Bytes::from_static(&[0, 28])
+        );
         assert_eq!(Bytes::from(QuestionType::NS), Bytes::from_static(&[0, 2]));
-        assert_eq!(Bytes::from(QuestionType::CNAME), Bytes::from_static(&[0, 5]));
+        assert_eq!(
+            Bytes::from(QuestionType::CNAME),
+            Bytes::from_static(&[0, 5])
+        );
         assert_eq!(Bytes::from(QuestionType::SRV), Bytes::from_static(&[0, 33]));
         assert_eq!(Bytes::from(QuestionType::PTR), Bytes::from_static(&[0, 12]));
     }
@@ -204,23 +209,25 @@ mod question_type_tests {
     }
 }
 
-
 mod question_tests {
     use super::*;
 
     #[test]
     fn test_new() {
         let question = Question::new("codecrafters.io".to_string(), 1, 1);
-        assert_eq!(question.qname, vec![
-            LabelSequence {
-                content: "codecrafters".to_string(),
-                length: 12,
-            },
-            LabelSequence {
-                content: "io".to_string(),
-                length: 2,
-            },
-        ]);
+        assert_eq!(
+            question.qname,
+            vec![
+                LabelSequence {
+                    content: "codecrafters".to_string(),
+                    length: 12,
+                },
+                LabelSequence {
+                    content: "io".to_string(),
+                    length: 2,
+                },
+            ]
+        );
         assert_eq!(question.qtype, QuestionType::A);
         assert_eq!(question.qclass, QuestionClass::IN);
     }
@@ -228,7 +235,7 @@ mod question_tests {
     #[test]
     fn test_question_to_bytes() {
         let bytes_sample: [u8; 18] = [
-            3, 119, 119, 119, 4, 116, 101, 115, 116, 3, 99, 111, 109, 0, 0, 1, 0, 1
+            3, 119, 119, 119, 4, 116, 101, 115, 116, 3, 99, 111, 109, 0, 0, 1, 0, 1,
         ];
 
         let question = Question {
@@ -255,7 +262,7 @@ mod question_tests {
     #[test]
     fn test_question_from_bytes() {
         let bytes_sample: [u8; 18] = [
-            3, 119, 119, 119, 4, 116, 101, 115, 116, 3, 99, 111, 109, 0, 0, 1, 0, 1
+            3, 119, 119, 119, 4, 116, 101, 115, 116, 3, 99, 111, 109, 0, 0, 1, 0, 1,
         ];
 
         let question = Question {
@@ -276,6 +283,9 @@ mod question_tests {
             qtype: QuestionType::A,
             qclass: QuestionClass::IN,
         };
-        assert_eq!(Question::from(Bytes::copy_from_slice(&bytes_sample)), question);
+        assert_eq!(
+            Question::from(Bytes::copy_from_slice(&bytes_sample)),
+            question
+        );
     }
 }

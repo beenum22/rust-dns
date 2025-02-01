@@ -1,17 +1,17 @@
+mod answer;
 #[allow(unused_imports)]
 mod header;
-mod question;
-mod answer;
 mod parser;
+mod question;
 
+use answer::Answer;
 use bytes::{Bytes, BytesMut};
 use futures::{SinkExt, StreamExt};
-use tokio_util::udp::UdpFramed;
-use tokio::net::UdpSocket;
 use header::Header;
-use question::Question;
-use answer::Answer;
 use parser::{Parser, UdpPacket};
+use question::Question;
+use tokio::net::UdpSocket;
+use tokio_util::udp::UdpFramed;
 
 #[tokio::main]
 async fn main() {
@@ -29,7 +29,7 @@ async fn main() {
     let (mut sink, mut stream) = framed.split();
     // let writer = FramedWrite::new(rx_writer, RespParser::new());
     // let mut buf = [0; 512];
-    
+
     loop {
         // match udp_socket.recv_from(&mut buf).await {
         match stream.next().await {
@@ -40,15 +40,45 @@ async fn main() {
                     let rcode = match packet.header.opcode {
                         0 => 0,
                         _ => 4,
-                        
                     };
-                    let header = Header::new(packet.header.id, 1, 1, 0, 0, true, packet.header.opcode, false, false, packet.header.rd, false, 0, rcode);
+                    let header = Header::new(
+                        packet.header.id,
+                        1,
+                        1,
+                        0,
+                        0,
+                        true,
+                        packet.header.opcode,
+                        false,
+                        false,
+                        packet.header.rd,
+                        false,
+                        0,
+                        rcode,
+                    );
                     let question = Question::new("codecrafters.io".to_string(), 1, 1);
-                    let answer = Answer::new("codecrafters.io".to_string(), 1, 1, 3600, 4, String::from("127.0.0.1"));
+                    let answer = Answer::new(
+                        "codecrafters.io".to_string(),
+                        1,
+                        1,
+                        3600,
+                        4,
+                        String::from("127.0.0.1"),
+                    );
                     // response.extend_from_slice(&Bytes::from(header));
                     // response.extend_from_slice(&Bytes::from(question));
                     // response.extend_from_slice(&Bytes::from(answer));
-                    if let Err(er) = sink.send((UdpPacket {header, question, answer: Some(answer)}, source)).await {
+                    if let Err(er) = sink
+                        .send((
+                            UdpPacket {
+                                header,
+                                question,
+                                answer: Some(answer),
+                            },
+                            source,
+                        ))
+                        .await
+                    {
                         eprintln!("Error sending data: {}", er);
                     }
                     // sink.send_all((response.freeze(), source)).await.unwrap();

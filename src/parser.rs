@@ -24,7 +24,7 @@ impl Decoder for Parser {
 
     fn decode(&mut self, src: &mut bytes::BytesMut) -> Result<Option<Self::Item>, Self::Error> {
         if src.len() == 0 {
-            return Ok(None)
+            return Ok(None);
         };
         // TODO: Return None when invalid lengths
         let header = Header::from(src.split_to(12).freeze());
@@ -62,7 +62,8 @@ mod parser_tests {
         let mut parser = Parser;
         let mut buf = bytes::BytesMut::new();
         buf.extend_from_slice(&[
-            0x04, 0xd2, 0x80, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 119, 119, 119, 4, 116, 101, 115, 116, 3, 99, 111, 109, 0, 0, 1, 0, 1
+            0x04, 0xd2, 0x80, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 119, 119, 119, 4, 116, 101, 115, 116,
+            3, 99, 111, 109, 0, 0, 1, 0, 1,
         ]);
 
         let packet = parser.decode(&mut buf);
