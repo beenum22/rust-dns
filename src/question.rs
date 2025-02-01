@@ -78,6 +78,16 @@ pub(crate) struct LabelSequence {
     pub(crate) length: u8,
 }
 
+impl LabelSequence {
+    pub(crate) fn new(content: String) -> Self {
+        LabelSequence {
+            length: content.len() as u8,
+            content,
+        }
+    }
+}
+
+#[derive(Debug, PartialEq)]
 pub(crate) struct Question {
     qname: Vec<LabelSequence>,
     qtype: QuestionType,
@@ -114,6 +124,38 @@ impl From<Question> for Bytes {
         bytes.extend_from_slice(&Bytes::from(value.qtype));
         bytes.extend_from_slice(&Bytes::from(value.qclass));
         bytes.freeze()
+    }
+}
+
+impl From<Bytes> for Question {
+    fn from(value: Bytes) -> Self {
+        let mut index = 0;
+        let mut labels = Vec::new();
+
+        while value[index] != b'\0' {
+            let mut content = String::new();
+            let length = value[index] as usize;
+            index += 1;
+            content.push_str(std::str::from_utf8(&value[index..index + length]).unwrap());  // TODO: Handle errors here
+            // content.push_str(".");
+            labels.push(LabelSequence {
+                content,
+                length: length as u8,
+            });
+            index = length + index;
+        }
+        index += 1;
+
+        if value.len() > index && value[index ..].len() != 4 {
+            panic!("Invalid Question length");
+        };
+        let qtype = QuestionType::from(u16::from_be_bytes([value[index], value[index + 1]]));
+        let qclass = QuestionClass::from(u16::from_be_bytes([value[index + 2], value[index + 3]]));
+        Question {
+            qname: labels,
+            qtype,
+            qclass,
+        }
     }
 }
 
@@ -208,5 +250,32 @@ mod question_tests {
             qclass: QuestionClass::IN,
         };
         assert_eq!(Bytes::from(question).as_ref(), bytes_sample);
+    }
+
+    #[test]
+    fn test_question_from_bytes() {
+        let bytes_sample: [u8; 18] = [
+            3, 119, 119, 119, 4, 116, 101, 115, 116, 3, 99, 111, 109, 0, 0, 1, 0, 1
+        ];
+
+        let question = Question {
+            qname: vec![
+                LabelSequence {
+                    content: "www".to_string(),
+                    length: 3,
+                },
+                LabelSequence {
+                    content: "test".to_string(),
+                    length: 4,
+                },
+                LabelSequence {
+                    content: "com".to_string(),
+                    length: 3,
+                },
+            ],
+            qtype: QuestionType::A,
+            qclass: QuestionClass::IN,
+        };
+        assert_eq!(Question::from(Bytes::copy_from_slice(&bytes_sample)), question);
     }
 }

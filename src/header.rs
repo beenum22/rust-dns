@@ -1,19 +1,20 @@
 use bytes::{Bytes, BytesMut};
 
+#[derive(Debug, PartialEq)]
 pub(crate) struct Header {
-    id: u16,
-    qdcount: u16,
-    ancount: u16,
-    nscount: u16,
-    arcount: u16,
-    qr: bool,
-    opcode: u8,
-    aa: bool,
-    tc: bool,
-    rd: bool,
-    ra: bool,
-    z: u8,
-    rcode: u8,
+    pub(crate) id: u16,
+    pub(crate) qdcount: u16,
+    pub(crate) ancount: u16,
+    pub(crate) nscount: u16,
+    pub(crate) arcount: u16,
+    pub(crate) qr: bool,
+    pub(crate) opcode: u8,
+    pub(crate) aa: bool,
+    pub(crate) tc: bool,
+    pub(crate) rd: bool,
+    pub(crate) ra: bool,
+    pub(crate) z: u8,
+    pub(crate) rcode: u8,
 }
 
 impl Header {
@@ -55,6 +56,29 @@ impl From<Header> for Bytes {
     }
 }
 
+impl From<Bytes> for Header {
+    fn from(value: Bytes) -> Self {
+        if value.len() != 12 {
+            panic!("Invalid header length");
+        }
+        Header {
+            id: u16::from_be_bytes([value[0], value[1]]),
+            qdcount: u16::from_be_bytes([value[4], value[5]]),
+            ancount: u16::from_be_bytes([value[6], value[7]]),
+            nscount: u16::from_be_bytes([value[8], value[9]]),
+            arcount: u16::from_be_bytes([value[10], value[11]]),
+            qr: (value[2] & 0b1000_0000) >> 7 != 0,
+            opcode: (value[2] & 0b0111_1000) >> 3,
+            aa: (value[2] & 0b0000_0100) >> 2 != 0,
+            tc: (value[2] & 0b0000_0010) >> 1 != 0,
+            rd: value[2] & 0b0000_0001 != 0,
+            ra: (value[3] & 0b1000_0000) >> 7 != 0,
+            z: (value[3] & 0b0111_0000) >> 4,
+            rcode: value[3] & 0b0000_1111,
+        }
+    }
+}
+
 #[cfg(test)]
 mod header_tests {
     use super::*;
@@ -80,5 +104,27 @@ mod header_tests {
         };
         let bytes = Bytes::from(header);
         assert_eq!(bytes, Bytes::copy_from_slice(&bytes_sample));
+    }
+
+    #[test]
+    fn test_header_from_bytes() {
+        let bytes_sample: [u8; 12] = [0x04, 0xd2, 0x80, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+
+        let header_sample = Header {
+            id: 1234,
+            qdcount: 0,
+            ancount: 0,
+            nscount: 0,
+            arcount: 0,
+            qr: true,
+            opcode: 0,
+            aa: false,
+            tc: false,
+            rd: false,
+            ra: false,
+            z: 0,
+            rcode: 0,
+        };
+        assert_eq!(Header::from(Bytes::copy_from_slice(&bytes_sample)), header_sample);
     }
 }
