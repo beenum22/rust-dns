@@ -176,9 +176,7 @@ impl From<Bytes> for Question {
             }
         }
         index += 1;
-        println!("REMAINING BYTES: {:?}", &value[index..].to_vec());
-        println!("VALUE LENGTH: {:?}, INDEX: {:?}, VALUE FROM INDEX LEN: {:?}", value.len(), index, value[index..].len());
-        if value.len() > index && value[index..].len() != 4 {
+        if value.len() > index && value[index..].len() < 4 {
             panic!("Invalid Question length");
         };
         let qtype = QuestionType::from(u16::from_be_bytes([value[index], value[index + 1]]));

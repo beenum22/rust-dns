@@ -64,7 +64,7 @@ mod parser_tests {
         let mut buf = bytes::BytesMut::new();
         buf.extend_from_slice(&[
             0x04, 0xd2, 0x80, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 119, 119, 119, 4, 116, 101, 115, 116,
-            3, 99, 111, 109, 0, 0, 1, 0, 1,
+            3, 99, 111, 109, 0, 0, 1, 0, 1, 3, 99, 111, 109, 0, 0, 1, 0, 1,
         ]);
 
         let packet = parser.decode(&mut buf);
