@@ -44,7 +44,7 @@ async fn main() {
                     };
                     let header = Header::new(
                         packet.header.id,
-                        1,
+                        packet.header.qdcount,
                         1,
                         0,
                         0,
