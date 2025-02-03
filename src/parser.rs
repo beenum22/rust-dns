@@ -34,13 +34,15 @@ impl Decoder for Parser {
             match (src[0] & 0b1100_0000) >> 6 {                
                 0 => {
                     if let Some(end) = src.iter().position(|&b| b == b'\0') {
-                        println!("Buffer before question {}: {:?}", _i, src);
+                        println!("Buffer before normal question {}: {:?}", _i, src);
                         questions.push(Question::from(src.split_to(end + 5).freeze()));
-                        println!("Buffer after question {}: {:?}", _i, src);
+                        println!("Buffer after normal question {}: {:?}", _i, src);
                     }
                 }
                 3 => {
+                    println!("Buffer before pointer question {}: {:?}", _i, src);
                     questions.push(Question::from(src.split_to(2).freeze()));
+                    println!("Buffer after pointer question {}: {:?}", _i, src);
                 }
                 _ => panic!("Invalid Label"),
             }
