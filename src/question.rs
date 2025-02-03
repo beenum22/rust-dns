@@ -158,7 +158,7 @@ impl From<Bytes> for Question {
                         break
                     }
                     let mut content = String::new();
-                    println!("Buffer during question {:?}", Bytes::copy_from_slice(&value[index..]));
+                    println!("Buffer during normal question {:?}", Bytes::copy_from_slice(&value[index..]));
                     let length = value[index] as usize;
                     index += 1;
                     content.push_str(std::str::from_utf8(&value[index..index + length]).unwrap()); // TODO: Handle errors here
@@ -171,6 +171,7 @@ impl From<Bytes> for Question {
                     // }
                 }
                 3 => {
+                    println!("Buffer during pointer question {:?}", Bytes::copy_from_slice(&value[index..]));
                     let pointer =
                         u16::from_be_bytes([value[index] & 0b0011_1111, value[index + 1]]);
                     labels.push(Label::Pointer(LabelPointer { pointer }));
