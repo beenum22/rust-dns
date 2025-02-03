@@ -149,29 +149,61 @@ impl From<Bytes> for Question {
     fn from(value: Bytes) -> Self {
         let mut index = 0;
         let mut labels: Vec<Label> = Vec::new();
-        match (value[0] & 0b1100_0000) >> 6 {
-            0 => {
-                while value[index] != b'\0' {
+
+        loop {
+            match (value[index] & 0b1100_0000) >> 6 {
+                0 => {
+                    // while value[index] != b'\0' {
+                    if value[index] == b'\0' {
+                        break
+                    }
                     let mut content = String::new();
+                    println!("Buffer during question {:?}", Bytes::copy_from_slice(&value[index..]));
                     let length = value[index] as usize;
                     index += 1;
                     content.push_str(std::str::from_utf8(&value[index..index + length]).unwrap()); // TODO: Handle errors here
-                                                                                                   // content.push_str(".");
+                                                                                                    // content.push_str(".");
                     labels.push(Label::Sequence(LabelSequence {
                         content,
                         length: length as u8,
                     }));
                     index = length + index;
+                    // }
                 }
-            }
-            3 => {
-                let pointer =
-                    u16::from_be_bytes([value[index] & 0b0011_1111, value[index + 1]]);
-                labels.push(Label::Pointer(LabelPointer { pointer }));
-                index += 2;
-            }
-            _ => panic!("Invalid Label"),
+                3 => {
+                    let pointer =
+                        u16::from_be_bytes([value[index] & 0b0011_1111, value[index + 1]]);
+                    labels.push(Label::Pointer(LabelPointer { pointer }));
+                    index += 2;
+                    break  // TODO: I don't know if it will fail at some point. Check.
+                }
+                _ => panic!("Invalid Label"),
+            }  
         }
+
+        // match (value[0] & 0b1100_0000) >> 6 {
+        //     0 => {
+        //         while value[index] != b'\0' {
+        //             let mut content = String::new();
+        //             let length = value[index] as usize;
+        //             index += 1;
+        //             content.push_str(std::str::from_utf8(&value[index..index + length]).unwrap()); // TODO: Handle errors here
+        //                                                                                            // content.push_str(".");
+        //             labels.push(Label::Sequence(LabelSequence {
+        //                 content,
+        //                 length: length as u8,
+        //             }));
+        //             index = length + index;
+        //         }
+        //     }
+        //     3 => {
+        //         let pointer =
+        //             u16::from_be_bytes([value[index] & 0b0011_1111, value[index + 1]]);
+        //         labels.push(Label::Pointer(LabelPointer { pointer }));
+        //         index += 2;
+        //     }
+        //     _ => panic!("Invalid Label"),
+        // }
 
 
         // while value[index] != b'\0' {
