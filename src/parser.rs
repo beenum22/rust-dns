@@ -23,7 +23,8 @@ impl Decoder for Parser {
     type Error = std::io::Error;
 
     fn decode(&mut self, src: &mut bytes::BytesMut) -> Result<Option<Self::Item>, Self::Error> {
-        if src.len() == 0 {
+        println!("Buffer before anything: {:?}", src);
+        if src.len() < 12 {
             return Ok(None);
         };
         // TODO: Return None when invalid lengths
