@@ -1,4 +1,4 @@
-use bytes::Bytes;
+use bytes::{Buf, Bytes};
 use tokio_util::codec::{Decoder, Encoder};
 
 use crate::{answer::Answer, header::Header, question::{self, Question}};
@@ -29,9 +29,14 @@ impl Decoder for Parser {
         // TODO: Return None when invalid lengths
         let header = Header::from(src.split_to(12).freeze());
         let mut questions = Vec::new();
-        while src.len() != 0 {
-            questions.push(Question::from(src.split_to(src.len()).freeze()));
+
+        for _i in 0..header.qdcount {
+            if let Some(end) = src.iter().position(|&b| b == b'\0') {
+                questions.push(Question::from(src.split_to(end + 5).freeze()));
+            }
+
         }
+        src.advance(src.len());
         Ok(Some(UdpPacket {
             header,
             question: questions,
