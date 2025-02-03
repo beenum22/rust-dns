@@ -57,23 +57,23 @@ async fn main() {
                         0,
                         rcode,
                     );
-                    let question = Question {
-                        qname: packet.question.qname.clone(),
-                        qtype: QuestionType::A,
-                        qclass: QuestionClass::IN,
-                    };
-                    let answer = Answer {
-                        name: packet.question.qname.clone(),
-                        typ: QuestionType::A,
-                        class: QuestionClass::IN,
-                        ttl: 3600,
-                        length: 4,
-                        data: RData::A(Ipv4Addr::new(8, 8, 8, 8)),
-                    };
+                    let mut answers = Vec::new();
+                    for q in &packet.question {
+                        answers.push(
+                            Answer {
+                                name: q.qname.clone(),
+                                typ: QuestionType::A,
+                                class: QuestionClass::IN,
+                                ttl: 3600,
+                                length: 4,
+                                data: RData::A(Ipv4Addr::new(8, 8, 8, 8)),
+                            }
+                        );
+                    }
                     let response = UdpPacket {
                         header,
-                        question,
-                        answer: Some(answer),
+                        question: packet.question,
+                        answer: Some(answers),
                     };
                     println!("Responding with {:?} packet to {}", response, source);
                     if let Err(er) = sink

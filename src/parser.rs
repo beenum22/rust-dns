@@ -1,13 +1,13 @@
 use bytes::Bytes;
 use tokio_util::codec::{Decoder, Encoder};
 
-use crate::{answer::Answer, header::Header, question::Question};
+use crate::{answer::Answer, header::Header, question::{self, Question}};
 
 #[derive(Debug, PartialEq)]
 pub(crate) struct UdpPacket {
     pub(crate) header: Header,
-    pub(crate) question: Question,
-    pub(crate) answer: Option<Answer>,
+    pub(crate) question: Vec<Question>,
+    pub(crate) answer: Option<Vec<Answer>>,
 }
 
 pub(crate) struct Parser;
@@ -28,10 +28,13 @@ impl Decoder for Parser {
         };
         // TODO: Return None when invalid lengths
         let header = Header::from(src.split_to(12).freeze());
-        let question = Question::from(src.split_to(src.len()).freeze());
+        let mut questions = Vec::new();
+        while src.len() != 0 {
+            questions.push(Question::from(src.split_to(src.len()).freeze()));
+        }
         Ok(Some(UdpPacket {
             header,
-            question,
+            question: questions,
             answer: None,
         }))
     }
@@ -42,9 +45,15 @@ impl Encoder<UdpPacket> for Parser {
 
     fn encode(&mut self, item: UdpPacket, dst: &mut bytes::BytesMut) -> Result<(), Self::Error> {
         dst.extend_from_slice(&Bytes::from(item.header));
-        dst.extend_from_slice(&Bytes::from(item.question));
+        for q in item.question {
+            dst.extend_from_slice(&Bytes::from(q));
+        }
         match item.answer {
-            Some(answer) => dst.extend_from_slice(&Bytes::from(answer)),
+            Some(answer) => {
+                for a in answer {
+                    dst.extend_from_slice(&Bytes::from(a))
+                }
+            },
             None => (),
         }
         Ok(())
@@ -73,7 +82,7 @@ mod parser_tests {
             packet.unwrap().unwrap(),
             UdpPacket {
                 header: Header::new(1234, 0, 0, 0, 0, true, 0, false, false, false, false, 0, 0),
-                question:Question::new("www.test.com".to_string(), 1, 1),
+                question:vec![Question::new("www.test.com".to_string(), 1, 1)],
                 answer: None,
             }
         )

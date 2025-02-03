@@ -137,8 +137,6 @@ impl From<Question> for Bytes {
                     bytes.extend_from_slice(sequence.content.as_bytes());
                 }
             }
-            // bytes.extend_from_slice(&[label.length]);
-            // bytes.extend_from_slice(label.content.as_bytes());
         }
         bytes.extend_from_slice(&[0]);
         bytes.extend_from_slice(&Bytes::from(value.qtype));
