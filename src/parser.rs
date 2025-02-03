@@ -31,11 +31,26 @@ impl Decoder for Parser {
         let mut questions = Vec::new();
 
         for _i in 0..header.qdcount {
-            if let Some(end) = src.iter().position(|&b| b == b'\0') {
-                println!("Buffer before question {}: {:?}", _i, src);
-                questions.push(Question::from(src.split_to(end + 5).freeze()));
-                println!("Buffer after question {}: {:?}", _i, src);
+            match (src[0] & 0b1100_0000) >> 6 {                
+                0 => {
+                    if let Some(end) = src.iter().position(|&b| b == b'\0') {
+                        println!("Buffer before question {}: {:?}", _i, src);
+                        questions.push(Question::from(src.split_to(end + 5).freeze()));
+                        println!("Buffer after question {}: {:?}", _i, src);
+                    }
+                }
+                3 => {
+                    questions.push(Question::from(src.split_to(2).freeze()));
+                }
+                _ => panic!("Invalid Label"),
             }
+
+
+            // if let Some(end) = src.iter().position(|&b| b == b'\0') {
+            //     println!("Buffer before question {}: {:?}", _i, src);
+            //     questions.push(Question::from(src.split_to(end + 5).freeze()));
+            //     println!("Buffer after question {}: {:?}", _i, src);
+            // }
 
         }
         src.advance(src.len());
