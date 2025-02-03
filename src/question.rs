@@ -73,6 +73,17 @@ impl From<u16> for QuestionClass {
 }
 
 #[derive(Debug, PartialEq, Clone)]
+pub(crate) enum Label {
+    Pointer(LabelPointer),
+    Sequence(LabelSequence),
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub(crate) struct LabelPointer {
+    pub(crate) pointer: u16,
+}
+
+#[derive(Debug, PartialEq, Clone)]
 pub(crate) struct LabelSequence {
     pub(crate) content: String,
     pub(crate) length: u8,
@@ -89,7 +100,7 @@ impl LabelSequence {
 
 #[derive(Debug, PartialEq, Clone)]
 pub(crate) struct Question {
-    pub(crate) qname: Vec<LabelSequence>,
+    pub(crate) qname: Vec<Label>,
     pub(crate) qtype: QuestionType,
     pub(crate) qclass: QuestionClass,
 }
@@ -98,10 +109,10 @@ impl Question {
     pub(crate) fn new(qname: String, qtype: u16, qclass: u16) -> Self {
         let mut labels = Vec::new();
         for label in qname.split('.') {
-            labels.push(LabelSequence {
+            labels.push(Label::Sequence(LabelSequence {
                 content: label.to_string(),
                 length: label.len() as u8,
-            });
+            }));
         }
         Question {
             qname: labels,
@@ -116,8 +127,18 @@ impl From<Question> for Bytes {
         let mut bytes = BytesMut::new();
 
         for label in value.qname {
-            bytes.extend_from_slice(&[label.length]);
-            bytes.extend_from_slice(label.content.as_bytes());
+            match label {
+                Label::Pointer(pointer) => {
+                    bytes.extend_from_slice(&[0b1100_0000 | (pointer.pointer >> 8) as u8]);
+                    bytes.extend_from_slice(&[pointer.pointer as u8]);
+                }
+                Label::Sequence(sequence) => {
+                    bytes.extend_from_slice(&[sequence.length]);
+                    bytes.extend_from_slice(sequence.content.as_bytes());
+                }
+            }
+            // bytes.extend_from_slice(&[label.length]);
+            // bytes.extend_from_slice(label.content.as_bytes());
         }
         bytes.extend_from_slice(&[0]);
         bytes.extend_from_slice(&Bytes::from(value.qtype));
@@ -129,19 +150,30 @@ impl From<Question> for Bytes {
 impl From<Bytes> for Question {
     fn from(value: Bytes) -> Self {
         let mut index = 0;
-        let mut labels = Vec::new();
+        let mut labels: Vec<Label> = Vec::new();
 
         while value[index] != b'\0' {
             let mut content = String::new();
-            let length = value[index] as usize;
-            index += 1;
-            content.push_str(std::str::from_utf8(&value[index..index + length]).unwrap()); // TODO: Handle errors here
-                                                                                           // content.push_str(".");
-            labels.push(LabelSequence {
-                content,
-                length: length as u8,
-            });
-            index = length + index;
+            match (value[index] & 0b1100_0000) >> 6 {
+                0 => {
+                    let length = value[index] as usize;
+                    index += 1;
+                    content.push_str(std::str::from_utf8(&value[index..index + length]).unwrap()); // TODO: Handle errors here
+                                                                                                   // content.push_str(".");
+                    labels.push(Label::Sequence(LabelSequence {
+                        content,
+                        length: length as u8,
+                    }));
+                    index = length + index;
+                }
+                3 => {
+                    let pointer =
+                        u16::from_be_bytes([value[index] & 0b0011_1111, value[index + 1]]);
+                    labels.push(Label::Pointer(LabelPointer { pointer }));
+                    index += 2;
+                }
+                _ => panic!("Invalid Label"),
+            }
         }
         index += 1;
 
@@ -218,14 +250,14 @@ mod question_tests {
         assert_eq!(
             question.qname,
             vec![
-                LabelSequence {
+                Label::Sequence(LabelSequence {
                     content: "codecrafters".to_string(),
                     length: 12,
-                },
-                LabelSequence {
+                }),
+                Label::Sequence(LabelSequence {
                     content: "io".to_string(),
                     length: 2,
-                },
+                }),
             ]
         );
         assert_eq!(question.qtype, QuestionType::A);
@@ -234,24 +266,44 @@ mod question_tests {
 
     #[test]
     fn test_question_to_bytes() {
-        let bytes_sample: [u8; 18] = [
-            3, 119, 119, 119, 4, 116, 101, 115, 116, 3, 99, 111, 109, 0, 0, 1, 0, 1,
+        let bytes_sample: [u8; 20] = [
+            3,
+            119,
+            119,
+            119,
+            4,
+            116,
+            101,
+            115,
+            116,
+            3,
+            99,
+            111,
+            109,
+            0b1100_0000 | 0x12,
+            0x34,
+            0,
+            0,
+            1,
+            0,
+            1,
         ];
 
         let question = Question {
             qname: vec![
-                LabelSequence {
+                Label::Sequence(LabelSequence {
                     content: "www".to_string(),
                     length: 3,
-                },
-                LabelSequence {
+                }),
+                Label::Sequence(LabelSequence {
                     content: "test".to_string(),
                     length: 4,
-                },
-                LabelSequence {
+                }),
+                Label::Sequence(LabelSequence {
                     content: "com".to_string(),
                     length: 3,
-                },
+                }),
+                Label::Pointer(LabelPointer { pointer: 0x1234 }),
             ],
             qtype: QuestionType::A,
             qclass: QuestionClass::IN,
@@ -261,24 +313,44 @@ mod question_tests {
 
     #[test]
     fn test_question_from_bytes() {
-        let bytes_sample: [u8; 18] = [
-            3, 119, 119, 119, 4, 116, 101, 115, 116, 3, 99, 111, 109, 0, 0, 1, 0, 1,
+        let bytes_sample: [u8; 20] = [
+            3,
+            119,
+            119,
+            119,
+            4,
+            116,
+            101,
+            115,
+            116,
+            3,
+            99,
+            111,
+            109,
+            0b1100_0000 | 0x12,
+            0x34,
+            0,
+            0,
+            1,
+            0,
+            1,
         ];
 
         let question = Question {
             qname: vec![
-                LabelSequence {
+                Label::Sequence(LabelSequence {
                     content: "www".to_string(),
                     length: 3,
-                },
-                LabelSequence {
+                }),
+                Label::Sequence(LabelSequence {
                     content: "test".to_string(),
                     length: 4,
-                },
-                LabelSequence {
+                }),
+                Label::Sequence(LabelSequence {
                     content: "com".to_string(),
                     length: 3,
-                },
+                }),
+                Label::Pointer(LabelPointer { pointer: 0x1234 }),
             ],
             qtype: QuestionType::A,
             qclass: QuestionClass::IN,

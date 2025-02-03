@@ -1,6 +1,6 @@
 use bytes::{Bytes, BytesMut};
 
-use crate::question::{LabelSequence, QuestionClass, QuestionType};
+use crate::question::{Label, LabelSequence, QuestionClass, QuestionType};
 use std::net::Ipv4Addr;
 
 #[derive(Debug, PartialEq)]
@@ -28,7 +28,7 @@ impl From<String> for RData {
 
 #[derive(Debug, PartialEq)]
 pub(crate) struct Answer {
-    pub(crate) name: Vec<LabelSequence>,
+    pub(crate) name: Vec<Label>,
     pub(crate) typ: QuestionType,
     pub(crate) class: QuestionClass,
     pub(crate) ttl: u32,
@@ -47,10 +47,10 @@ impl Answer {
     ) -> Self {
         let mut labels = Vec::new();
         for label in name.split('.') {
-            labels.push(LabelSequence {
+            labels.push(Label::Sequence(LabelSequence {
                 content: label.to_string(),
                 length: label.len() as u8,
-            });
+            }));
         }
         Answer {
             name: labels,
@@ -67,8 +67,16 @@ impl From<Answer> for Bytes {
     fn from(value: Answer) -> Self {
         let mut bytes = BytesMut::new();
         for label in value.name {
-            bytes.extend_from_slice(&[label.length]);
-            bytes.extend_from_slice(label.content.as_bytes());
+            match label {
+                Label::Pointer(pointer) => {
+                    bytes.extend_from_slice(&[0b1100_0000 | (pointer.pointer >> 8) as u8]);
+                    bytes.extend_from_slice(&[pointer.pointer as u8]);
+                }
+                Label::Sequence(sequence) => {
+                    bytes.extend_from_slice(&[sequence.length]);
+                    bytes.extend_from_slice(sequence.content.as_bytes());
+                }
+            }
         }
         bytes.extend_from_slice(&[0]);
         bytes.extend_from_slice(&Bytes::from(value.typ));
@@ -116,14 +124,14 @@ mod answer_tests {
             answer,
             Answer {
                 name: vec![
-                    LabelSequence {
+                    Label::Sequence(LabelSequence {
                         content: "codecrafters".to_string(),
                         length: 12,
-                    },
-                    LabelSequence {
+                    }),
+                    Label::Sequence(LabelSequence {
                         content: "io".to_string(),
                         length: 2,
-                    },
+                    }),
                 ],
                 typ: QuestionType::A,
                 class: QuestionClass::IN,
