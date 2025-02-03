@@ -32,7 +32,9 @@ impl Decoder for Parser {
 
         for _i in 0..header.qdcount {
             if let Some(end) = src.iter().position(|&b| b == b'\0') {
+                println!("Buffer before question {}: {:?}", _i, src);
                 questions.push(Question::from(src.split_to(end + 5).freeze()));
+                println!("Buffer after question {}: {:?}", _i, src);
             }
 
         }
