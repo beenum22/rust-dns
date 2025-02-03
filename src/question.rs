@@ -176,7 +176,8 @@ impl From<Bytes> for Question {
             }
         }
         index += 1;
-
+        println!("REMAINING BYTES: {:?}", &value[index..].to_vec());
+        println!("VALUE LENGTH: {:?}, INDEX: {:?}, VALUE FROM INDEX LEN: {:?}", value.len(), index, value[index..].len());
         if value.len() > index && value[index..].len() != 4 {
             panic!("Invalid Question length");
         };
@@ -313,11 +314,13 @@ mod question_tests {
 
     #[test]
     fn test_question_from_bytes() {
-        let bytes_sample: [u8; 20] = [
+        let bytes_sample: [u8; 22] = [
             3,
             119,
             119,
             119,
+            0b1100_0000 | 0x12,
+            0x34,
             4,
             116,
             101,
@@ -342,6 +345,7 @@ mod question_tests {
                     content: "www".to_string(),
                     length: 3,
                 }),
+                Label::Pointer(LabelPointer { pointer: 0x1234 }),
                 Label::Sequence(LabelSequence {
                     content: "test".to_string(),
                     length: 4,
