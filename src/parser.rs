@@ -28,7 +28,6 @@ impl Decoder for Parser {
         };
         // TODO: Return None when invalid lengths
         let header = Header::from(src.split_to(12).freeze());
-        print!("Header: {:?}\n", header);
         let question = Question::from(src.split_to(src.len()).freeze());
         Ok(Some(UdpPacket {
             header,

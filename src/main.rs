@@ -70,13 +70,15 @@ async fn main() {
                         length: 4,
                         data: RData::A(Ipv4Addr::new(8, 8, 8, 8)),
                     };
+                    let response = UdpPacket {
+                        header,
+                        question,
+                        answer: Some(answer),
+                    };
+                    println!("Responding with {:?} packet to {}", response, source);
                     if let Err(er) = sink
                         .send((
-                            UdpPacket {
-                                header,
-                                question,
-                                answer: Some(answer),
-                            },
+                            response,
                             source,
                         ))
                         .await
