@@ -1,4 +1,4 @@
-use bytes::{Bytes, BytesMut};
+use bytes::{Buf, Bytes, BytesMut};
 
 #[derive(Debug, PartialEq, Clone)]
 pub(crate) enum QuestionType {
@@ -145,24 +145,24 @@ impl From<Question> for Bytes {
     }
 }
 
-impl From<Bytes> for Question {
-    fn from(value: Bytes) -> Self {
+impl<B: Buf> From<B> for Question {
+    fn from(mut value: B) -> Self {
         let mut index = 0;
         let mut labels: Vec<Label> = Vec::new();
 
         loop {
-            match (value[index] & 0b1100_0000) >> 6 {
+            let first_byte = value.get_u8();
+            match (first_byte & 0b1100_0000) >> 6 {
                 0 => {
                     // while value[index] != b'\0' {
-                    if value[index] == b'\0' {
+                    if first_byte == b'\0' {
                         break
                     }
+                    let length = first_byte as usize;
                     let mut content = String::new();
-                    println!("Buffer during normal question {:?}", Bytes::copy_from_slice(&value[index..]));
-                    let length = value[index] as usize;
-                    index += 1;
-                    content.push_str(std::str::from_utf8(&value[index..index + length]).unwrap()); // TODO: Handle errors here
-                                                                                                    // content.push_str(".");
+                    // println!("Buffer during normal question {:?}", value);
+                    let label_bytes = value.copy_to_bytes(length);
+                    content.push_str(std::str::from_utf8(&label_bytes).unwrap()); // TODO: Handle errors here
                     labels.push(Label::Sequence(LabelSequence {
                         content,
                         length: length as u8,
@@ -171,78 +171,123 @@ impl From<Bytes> for Question {
                     // }
                 }
                 3 => {
-                    println!("Buffer during pointer question {:?}", Bytes::copy_from_slice(&value[index..]));
-                    let pointer =
-                        u16::from_be_bytes([value[index] & 0b0011_1111, value[index + 1]]);
+                    // println!("Buffer during pointer question {:?}", Bytes::copy_from_slice(&value[index..]));
+                    let pointer = ((first_byte & 0b0011_1111) as u16) << 8 | value.get_u8() as u16;
+                    // let pointer =
+                    //     u16::from_be_bytes([value[index] & 0b0011_1111, value[index + 1]]);
                     labels.push(Label::Pointer(LabelPointer { pointer }));
-                    index += 2;
-                    break  // TODO: I don't know if it will fail at some point. Check.
                 }
                 _ => panic!("Invalid Label"),
             }  
         }
-
-        // match (value[0] & 0b1100_0000) >> 6 {
-        //     0 => {
-        //         while value[index] != b'\0' {
-        //             let mut content = String::new();
-        //             let length = value[index] as usize;
-        //             index += 1;
-        //             content.push_str(std::str::from_utf8(&value[index..index + length]).unwrap()); // TODO: Handle errors here
-        //                                                                                            // content.push_str(".");
-        //             labels.push(Label::Sequence(LabelSequence {
-        //                 content,
-        //                 length: length as u8,
-        //             }));
-        //             index = length + index;
-        //         }
-        //     }
-        //     3 => {
-        //         let pointer =
-        //             u16::from_be_bytes([value[index] & 0b0011_1111, value[index + 1]]);
-        //         labels.push(Label::Pointer(LabelPointer { pointer }));
-        //         index += 2;
-        //     }
-        //     _ => panic!("Invalid Label"),
-        // }
-
-
-        // while value[index] != b'\0' {
-        //     let mut content = String::new();
-        //     match (value[index] & 0b1100_0000) >> 6 {
-        //         0 => {
-        //             let length = value[index] as usize;
-        //             index += 1;
-        //             content.push_str(std::str::from_utf8(&value[index..index + length]).unwrap()); // TODO: Handle errors here
-        //                                                                                            // content.push_str(".");
-        //             labels.push(Label::Sequence(LabelSequence {
-        //                 content,
-        //                 length: length as u8,
-        //             }));
-        //             index = length + index;
-        //         }
-        //         3 => {
-        //             let pointer =
-        //                 u16::from_be_bytes([value[index] & 0b0011_1111, value[index + 1]]);
-        //             labels.push(Label::Pointer(LabelPointer { pointer }));
-        //             index += 2;
-        //         }
-        //         _ => panic!("Invalid Label"),
-        //     }
-        // }
-        index += 1;
-        if value.len() > index && value[index..].len() < 4 {
-            panic!("Invalid Question length");
-        };
-        let qtype = QuestionType::from(u16::from_be_bytes([value[index], value[index + 1]]));
-        let qclass = QuestionClass::from(u16::from_be_bytes([value[index + 2], value[index + 3]]));
+        let qtype = QuestionType::from(value.get_u16());
+        let qclass = QuestionClass::from(value.get_u16());
         Question {
             qname: labels,
             qtype,
             qclass,
-        }
+        }   
     }
 }
+
+// impl From<Bytes> for Question {
+//     fn from(value: Bytes) -> Self {
+//         let mut index = 0;
+//         let mut labels: Vec<Label> = Vec::new();
+
+//         loop {
+//             match (value[index] & 0b1100_0000) >> 6 {
+//                 0 => {
+//                     // while value[index] != b'\0' {
+//                     if value[index] == b'\0' {
+//                         break
+//                     }
+//                     let mut content = String::new();
+//                     println!("Buffer during normal question {:?}", Bytes::copy_from_slice(&value[index..]));
+//                     let length = value[index] as usize;
+//                     index += 1;
+//                     content.push_str(std::str::from_utf8(&value[index..index + length]).unwrap()); // TODO: Handle errors here
+//                                                                                                     // content.push_str(".");
+//                     labels.push(Label::Sequence(LabelSequence {
+//                         content,
+//                         length: length as u8,
+//                     }));
+//                     index = length + index;
+//                     // }
+//                 }
+//                 3 => {
+//                     println!("Buffer during pointer question {:?}", Bytes::copy_from_slice(&value[index..]));
+//                     let pointer =
+//                         u16::from_be_bytes([value[index] & 0b0011_1111, value[index + 1]]);
+//                     labels.push(Label::Pointer(LabelPointer { pointer }));
+//                     index += 2;
+//                     break  // TODO: I don't know if it will fail at some point. Check.
+//                 }
+//                 _ => panic!("Invalid Label"),
+//             }  
+//         }
+
+//         // match (value[0] & 0b1100_0000) >> 6 {
+//         //     0 => {
+//         //         while value[index] != b'\0' {
+//         //             let mut content = String::new();
+//         //             let length = value[index] as usize;
+//         //             index += 1;
+//         //             content.push_str(std::str::from_utf8(&value[index..index + length]).unwrap()); // TODO: Handle errors here
+//         //                                                                                            // content.push_str(".");
+//         //             labels.push(Label::Sequence(LabelSequence {
+//         //                 content,
+//         //                 length: length as u8,
+//         //             }));
+//         //             index = length + index;
+//         //         }
+//         //     }
+//         //     3 => {
+//         //         let pointer =
+//         //             u16::from_be_bytes([value[index] & 0b0011_1111, value[index + 1]]);
+//         //         labels.push(Label::Pointer(LabelPointer { pointer }));
+//         //         index += 2;
+//         //     }
+//         //     _ => panic!("Invalid Label"),
+//         // }
+
+
+//         // while value[index] != b'\0' {
+//         //     let mut content = String::new();
+//         //     match (value[index] & 0b1100_0000) >> 6 {
+//         //         0 => {
+//         //             let length = value[index] as usize;
+//         //             index += 1;
+//         //             content.push_str(std::str::from_utf8(&value[index..index + length]).unwrap()); // TODO: Handle errors here
+//         //                                                                                            // content.push_str(".");
+//         //             labels.push(Label::Sequence(LabelSequence {
+//         //                 content,
+//         //                 length: length as u8,
+//         //             }));
+//         //             index = length + index;
+//         //         }
+//         //         3 => {
+//         //             let pointer =
+//         //                 u16::from_be_bytes([value[index] & 0b0011_1111, value[index + 1]]);
+//         //             labels.push(Label::Pointer(LabelPointer { pointer }));
+//         //             index += 2;
+//         //         }
+//         //         _ => panic!("Invalid Label"),
+//         //     }
+//         // }
+//         index += 1;
+//         if value.len() > index && value[index..].len() < 4 {
+//             panic!("Invalid Question length");
+//         };
+//         let qtype = QuestionType::from(u16::from_be_bytes([value[index], value[index + 1]]));
+//         let qclass = QuestionClass::from(u16::from_be_bytes([value[index + 2], value[index + 3]]));
+//         Question {
+//             qname: labels,
+//             qtype,
+//             qclass,
+//         }
+//     }
+// }
 
 #[cfg(test)]
 mod question_class_tests {
