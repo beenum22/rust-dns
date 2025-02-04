@@ -23,7 +23,6 @@ impl Decoder for Parser {
     type Error = std::io::Error;
 
     fn decode(&mut self, src: &mut bytes::BytesMut) -> Result<Option<Self::Item>, Self::Error> {
-        println!("Buffer before anything: {:?}", src);
         if src.len() < 12 {
             return Ok(None);
         };
@@ -33,31 +32,6 @@ impl Decoder for Parser {
 
         for _i in 0..header.qdcount {
             questions.push(Question::from(src.clone()));
-            // match (src[0] & 0b1100_0000) >> 6 {                
-            //     0 => {
-            //         let s = src.spli;
-            //         questions.push(Question::from(src.split_to(end + 5).freeze()));
-            //         if let Some(end) = src.iter().position(|&b| b == b'\0') {
-            //             println!("Buffer before normal question {}: {:?}", _i, src);
-            //             questions.push());
-            //             println!("Buffer after normal question {}: {:?}", _i, src);
-            //         }
-            //     }
-            //     3 => {
-            //         println!("Buffer before pointer question {}: {:?}", _i, src);
-            //         questions.push(Question::from(src.split_to(2).freeze()));
-            //         println!("Buffer after pointer question {}: {:?}", _i, src);
-            //     }
-            //     _ => panic!("Invalid Label"),
-            // }
-
-
-            // if let Some(end) = src.iter().position(|&b| b == b'\0') {
-            //     println!("Buffer before question {}: {:?}", _i, src);
-            //     questions.push(Question::from(src.split_to(end + 5).freeze()));
-            //     println!("Buffer after question {}: {:?}", _i, src);
-            // }
-
         }
         src.advance(src.len());
         Ok(Some(UdpPacket {
