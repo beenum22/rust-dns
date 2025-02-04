@@ -1,7 +1,11 @@
 use bytes::{Buf, Bytes};
 use tokio_util::codec::{Decoder, Encoder};
 
-use crate::{answer::Answer, header::Header, question::{self, Question}};
+use crate::{
+    answer::Answer,
+    header::Header,
+    question::{self, Question},
+};
 
 #[derive(Debug, PartialEq)]
 pub(crate) struct UdpPacket {
@@ -55,7 +59,7 @@ impl Encoder<UdpPacket> for Parser {
                 for a in answer {
                     dst.extend_from_slice(&Bytes::from(a))
                 }
-            },
+            }
             None => (),
         }
         Ok(())
@@ -84,7 +88,7 @@ mod parser_tests {
             packet.unwrap().unwrap(),
             UdpPacket {
                 header: Header::new(1234, 0, 0, 0, 0, true, 0, false, false, false, false, 0, 0),
-                question:vec![Question::new("www.test.com".to_string(), 1, 1)],
+                question: vec![Question::new("www.test.com".to_string(), 1, 1)],
                 answer: None,
             }
         )

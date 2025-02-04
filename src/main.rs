@@ -6,12 +6,12 @@ mod question;
 
 use std::net::Ipv4Addr;
 
+use answer::{Answer, RData};
 use bytes::{Bytes, BytesMut};
 use futures::{SinkExt, StreamExt};
 use header::Header;
 use parser::{Parser, UdpPacket};
-use question::{Question, QuestionType, QuestionClass};
-use answer::{RData, Answer};
+use question::{Question, QuestionClass, QuestionType};
 use tokio::net::UdpSocket;
 use tokio_util::udp::UdpFramed;
 
@@ -59,16 +59,14 @@ async fn main() {
                     );
                     let mut answers = Vec::new();
                     for q in &packet.question {
-                        answers.push(
-                            Answer {
-                                name: q.qname.clone(),
-                                typ: QuestionType::A,
-                                class: QuestionClass::IN,
-                                ttl: 3600,
-                                length: 4,
-                                data: RData::A(Ipv4Addr::new(8, 8, 8, 8)),
-                            }
-                        );
+                        answers.push(Answer {
+                            name: q.qname.clone(),
+                            typ: QuestionType::A,
+                            class: QuestionClass::IN,
+                            ttl: 3600,
+                            length: 4,
+                            data: RData::A(Ipv4Addr::new(8, 8, 8, 8)),
+                        });
                     }
                     let response = UdpPacket {
                         header,
@@ -76,13 +74,7 @@ async fn main() {
                         answer: Some(answers),
                     };
                     println!("Responding with {:?} packet to {}", response, source);
-                    if let Err(er) = sink
-                        .send((
-                            response,
-                            source,
-                        ))
-                        .await
-                    {
+                    if let Err(er) = sink.send((response, source)).await {
                         eprintln!("Error sending data: {}", er);
                     }
                 }

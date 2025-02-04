@@ -155,7 +155,7 @@ impl<B: Buf> From<B> for Question {
             match (first_byte & 0b1100_0000) >> 6 {
                 0 => {
                     if first_byte == b'\0' {
-                        break
+                        break;
                     }
                     let length = first_byte as usize;
                     let mut content = String::new();
@@ -173,7 +173,7 @@ impl<B: Buf> From<B> for Question {
                     labels.push(Label::Pointer(LabelPointer { pointer }));
                 }
                 _ => panic!("Invalid Label"),
-            }  
+            }
         }
         let qtype = QuestionType::from(value.get_u16());
         let qclass = QuestionClass::from(value.get_u16());
@@ -181,7 +181,7 @@ impl<B: Buf> From<B> for Question {
             qname: labels,
             qtype,
             qclass,
-        }   
+        }
     }
 }
 
