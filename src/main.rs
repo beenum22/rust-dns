@@ -4,18 +4,9 @@ mod parser;
 mod question;
 mod server;
 
-use answer::{Answer, RData};
-use bytes::{Bytes, BytesMut};
 use clap::Parser as CliParser;
-use futures::{SinkExt, StreamExt};
-use header::Header;
-use log::{info, log_enabled, Level, LevelFilter};
-use parser::{Parser, UdpPacket};
-use question::{Question, QuestionClass, QuestionType};
+use log::LevelFilter;
 use server::DnsServer;
-use std::net::Ipv4Addr;
-use tokio::net::UdpSocket;
-use tokio_util::udp::UdpFramed;
 
 #[derive(CliParser)]
 #[command(version)]
