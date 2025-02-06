@@ -10,7 +10,7 @@ use tokio_util::udp::UdpFramed;
 
 pub(crate) struct DnsServer {
     socket: SocketAddr,
-    resolver: Option<SocketAddr>
+    resolver: Option<SocketAddr>,
 }
 
 impl DnsServer {
@@ -19,13 +19,14 @@ impl DnsServer {
             Some(addr) => {
                 let parts: Vec<&str> = addr.split_whitespace().collect();
                 let (host_str, port_str) = (parts[0], parts[1]);
-                Some(format!("{host_str}:{port_str}")
-                    .to_socket_addrs()
-                    .expect("Invalid socket address")
-                    .next()
-                    .unwrap()
+                Some(
+                    format!("{host_str}:{port_str}")
+                        .to_socket_addrs()
+                        .expect("Invalid socket address")
+                        .next()
+                        .unwrap(),
                 )
-            },
+            }
             None => None,
         };
         Self {
@@ -34,7 +35,7 @@ impl DnsServer {
                 .expect("Invalid socket address")
                 .next()
                 .unwrap(),
-            resolver: resolver_socket
+            resolver: resolver_socket,
         }
     }
 
