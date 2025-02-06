@@ -10,21 +10,36 @@ use tokio_util::udp::UdpFramed;
 
 pub(crate) struct DnsServer {
     socket: SocketAddr,
+    resolver: Option<SocketAddr>
 }
 
 impl DnsServer {
     pub(crate) fn new(addr: String, port: u16, resolver: Option<String>) -> Self {
+        let resolver_socket = match resolver {
+            Some(addr) => {
+                let parts: Vec<&str> = addr.split_whitespace().collect();
+                let (host_str, port_str) = (parts[0], parts[1]);
+                Some(format!("{host_str}:{port_str}")
+                    .to_socket_addrs()
+                    .expect("Invalid socket address")
+                    .next()
+                    .unwrap()
+                )
+            },
+            None => None,
+        };
         Self {
             socket: format!("{addr}:{port}")
                 .to_socket_addrs()
                 .expect("Invalid socket address")
                 .next()
                 .unwrap(),
+            resolver: resolver_socket
         }
     }
 
     pub(crate) async fn run(&self) {
-        let udp_socket = match UdpSocket::bind("127.0.0.1:2053").await {
+        let udp_socket = match UdpSocket::bind(self.socket).await {
             Ok(listener) => listener,
             Err(e) => {
                 error!("Failed to bind UDP listener: {}", e);
@@ -42,7 +57,6 @@ impl DnsServer {
         let (mut sink, mut stream) = framed.split();
 
         loop {
-            // match udp_socket.recv_from(&mut buf).await {
             match stream.next().await {
                 Some(val) => match val {
                     Ok((packet, source)) => {
