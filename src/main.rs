@@ -4,16 +4,16 @@ mod parser;
 mod question;
 mod server;
 
-use std::net::Ipv4Addr;
-use clap::Parser as CliParser;
-use log::{info, log_enabled, Level, LevelFilter};
 use answer::{Answer, RData};
 use bytes::{Bytes, BytesMut};
+use clap::Parser as CliParser;
 use futures::{SinkExt, StreamExt};
 use header::Header;
+use log::{info, log_enabled, Level, LevelFilter};
 use parser::{Parser, UdpPacket};
 use question::{Question, QuestionClass, QuestionType};
 use server::DnsServer;
+use std::net::Ipv4Addr;
 use tokio::net::UdpSocket;
 use tokio_util::udp::UdpFramed;
 
@@ -54,18 +54,17 @@ async fn main() {
         "debug" => LevelFilter::Debug,
         "trace" => LevelFilter::Trace,
         _ => {
-            println!("Invalid log level '{}', defaulting to 'info'", args.loglevel);
+            println!(
+                "Invalid log level '{}', defaulting to 'info'",
+                args.loglevel
+            );
             LevelFilter::Info
         }
     };
 
     setup_logger(log_level).unwrap();
 
-    let server = DnsServer::new(
-        args.addr,
-        args.port,
-        args.resolver,
-    );
+    let server = DnsServer::new(args.addr, args.port, args.resolver);
 
     server.run().await
 }

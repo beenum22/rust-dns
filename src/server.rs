@@ -1,29 +1,25 @@
-use std::net::{Ipv4Addr, SocketAddr, ToSocketAddrs};
-use log::{debug, error, info};
-use tokio::net::UdpSocket;
-use crate::parser::{Parser, UdpPacket};
-use crate::header::Header;
-use crate::question::{QuestionClass, QuestionType};
 use crate::answer::{Answer, RData};
-use tokio_util::udp::UdpFramed;
+use crate::header::Header;
+use crate::parser::{Parser, UdpPacket};
+use crate::question::{QuestionClass, QuestionType};
 use futures::{SinkExt, StreamExt};
+use log::{debug, error, info};
+use std::net::{Ipv4Addr, SocketAddr, ToSocketAddrs};
+use tokio::net::UdpSocket;
+use tokio_util::udp::UdpFramed;
 
 pub(crate) struct DnsServer {
     socket: SocketAddr,
 }
 
 impl DnsServer {
-    pub(crate) fn new(
-        addr: String,
-        port: u16,
-        resolver: Option<String>,
-    ) -> Self {
+    pub(crate) fn new(addr: String, port: u16, resolver: Option<String>) -> Self {
         Self {
             socket: format!("{addr}:{port}")
-            .to_socket_addrs()
-            .expect("Invalid socket address")
-            .next()
-            .unwrap(),
+                .to_socket_addrs()
+                .expect("Invalid socket address")
+                .next()
+                .unwrap(),
         }
     }
 
@@ -44,7 +40,6 @@ impl DnsServer {
 
         let framed = UdpFramed::new(udp_socket, Parser::new());
         let (mut sink, mut stream) = framed.split();
-
 
         loop {
             // match udp_socket.recv_from(&mut buf).await {
