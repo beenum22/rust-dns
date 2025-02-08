@@ -55,7 +55,7 @@ async fn main() {
 
     setup_logger(log_level).unwrap();
 
-    let server = DnsServer::new(args.addr, args.port, None);
+    let server = DnsServer::new(args.addr, args.port, args.resolver);
 
     server.run().await
 }
