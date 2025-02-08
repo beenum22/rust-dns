@@ -124,6 +124,8 @@ impl DnsServer {
                                                 }
                                                 header = upstream_packet.header;
                                                 if header.ancount == 0 {
+                                                    header.qdcount = packet.header.qdcount;
+                                                    header.ancount = packet.header.qdcount;
                                                     for q in &packet.question {
                                                         answers.push(Answer {
                                                             name: q.qname.clone(),
