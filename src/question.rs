@@ -153,7 +153,7 @@ impl<B: Buf> From<&mut B> for Question {
         let mut index = 0;
         let mut labels: Vec<Label> = Vec::new();
         // let mut labels_v2: HashMap<usize, Label> = HashMap::new();
-        // debug!("Question Bytes: {:02X?}", value.chunk());
+        debug!("Question Bytes: {:02X?}", value.chunk());
         loop {
             let first_byte = value.get_u8();
             match (first_byte & 0b1100_0000) >> 6 {

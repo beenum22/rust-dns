@@ -79,7 +79,7 @@ impl<B: Buf> From<&mut B> for Header {
         if value.remaining() < 12 {
             panic!("Invalid header length");
         }
-        // debug!("Header Bytes: {:02X?}", value.chunk());
+        debug!("Header Bytes: {:02X?}", value.chunk());
         let id = value.get_u16();
         let flags = value.get_u8();
         let qr = (flags & 0b1000_0000) >> 7 != 0;
