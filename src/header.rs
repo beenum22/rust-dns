@@ -88,7 +88,7 @@ impl<B: Buf> From<&mut B> for Header {
         let more_flags = value.get_u8();
         let ra = (more_flags & 0b1000_0000) >> 7 != 0;
         let z = (more_flags & 0b0111_0000) >> 4;
-        let rcode =  more_flags & 0b0000_1111;
+        let rcode = more_flags & 0b0000_1111;
         let qdcount = value.get_u16();
         let ancount = value.get_u16();
         let nscount = value.get_u16();

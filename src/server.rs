@@ -5,11 +5,10 @@ use crate::question::{QuestionClass, QuestionType};
 use futures::stream::{SplitSink, SplitStream};
 use futures::{SinkExt, StreamExt};
 use log::{debug, error, info};
-use tokio::sync::mpsc;
 use std::net::{Ipv4Addr, SocketAddr, ToSocketAddrs};
 use tokio::net::UdpSocket;
+use tokio::sync::mpsc;
 use tokio_util::udp::UdpFramed;
-
 
 pub(crate) struct DnsServer {
     socket: SocketAddr,
@@ -73,50 +72,56 @@ impl DnsServer {
 
         loop {
             match stream.next().await {
-                Some(val) => match val {
-                    Ok((packet, source)) => {
-                        let tx_clone = tx.clone();
-                        let resolver_clone = self.resolver.clone();
-                        tokio::spawn(async move {
-                            debug!("Received {:?} packet from {}", packet, source);
-                            let rcode = match packet.header.opcode {
-                                0 => 0,
-                                _ => 4,
-                            };
-                            let mut header = Header::new(
-                                packet.header.id,
-                                packet.header.qdcount,
-                                packet.header.qdcount,
-                                0,
-                                0,
-                                true,
-                                packet.header.opcode,
-                                false,
-                                false,
-                                packet.header.rd,
-                                false,
-                                0,
-                                rcode,
-                            );
-                            let mut answers = Vec::new();
-                            match resolver_clone {
-                                Some(addr) => {
-                                    let resolver_udp_socket = match UdpSocket::bind("0.0.0.0:0").await {
-                                        Ok(listener) => listener,
-                                        Err(e) => {
-                                            error!("Failed to bind UDP listener: {}", e);
-                                            return;
+                Some(val) => {
+                    match val {
+                        Ok((packet, source)) => {
+                            let tx_clone = tx.clone();
+                            let resolver_clone = self.resolver.clone();
+                            tokio::spawn(async move {
+                                debug!("Received {:?} packet from {}", packet, source);
+                                let rcode = match packet.header.opcode {
+                                    0 => 0,
+                                    _ => 4,
+                                };
+                                let mut header = Header::new(
+                                    packet.header.id,
+                                    packet.header.qdcount,
+                                    packet.header.qdcount,
+                                    0,
+                                    0,
+                                    true,
+                                    packet.header.opcode,
+                                    false,
+                                    false,
+                                    packet.header.rd,
+                                    false,
+                                    0,
+                                    rcode,
+                                );
+                                let mut answers = Vec::new();
+                                match resolver_clone {
+                                    Some(addr) => {
+                                        let resolver_udp_socket =
+                                            match UdpSocket::bind("0.0.0.0:0").await {
+                                                Ok(listener) => listener,
+                                                Err(e) => {
+                                                    error!("Failed to bind UDP listener: {}", e);
+                                                    return;
+                                                }
+                                            };
+                                        let resolver_framed =
+                                            UdpFramed::new(resolver_udp_socket, Parser::new());
+                                        let (mut r_sink, mut r_stream) = resolver_framed.split();
+                                        debug!(
+                                            "Forwarding {:?} packet to the upstream server {}",
+                                            packet, addr
+                                        );
+                                        if let Err(_) = r_sink.send((packet.clone(), addr)).await {
+                                            error!("Failed to forward UDP request to the upstream server")
                                         }
-                                    };
-                                    let resolver_framed = UdpFramed::new(resolver_udp_socket, Parser::new());
-                                    let (mut r_sink, mut r_stream) = resolver_framed.split();
-                                    debug!("Forwarding {:?} packet to the upstream server {}", packet, addr);
-                                    if let Err(_) = r_sink.send((packet.clone(), addr)).await {
-                                        error!("Failed to forward UDP request to the upstream server")
-                                    }
 
-                                    if let Some(upstream_response) = r_stream.next().await {
-                                        match upstream_response {
+                                        if let Some(upstream_response) = r_stream.next().await {
+                                            match upstream_response {
                                             Ok((upstream_packet, _)) => {
                                                 debug!("Received {:?} packet from the upstream server {}", upstream_packet, addr);
                                                 if let Some(ans) = upstream_packet.answer {
@@ -141,38 +146,38 @@ impl DnsServer {
                                             },
                                             Err(_) => error!("Failed to parse response from the upstream server"),
                                         }
+                                        }
                                     }
+                                    None => {
+                                        for q in &packet.question {
+                                            answers.push(Answer {
+                                                name: q.qname.clone(),
+                                                typ: QuestionType::A,
+                                                class: QuestionClass::IN,
+                                                ttl: 3600,
+                                                length: 4,
+                                                data: RData::A(Ipv4Addr::new(8, 8, 8, 8)),
+                                            });
+                                        }
+                                    }
+                                }
 
-                                },
-                                None => {
-                                    for q in &packet.question {
-                                        answers.push(Answer {
-                                            name: q.qname.clone(),
-                                            typ: QuestionType::A,
-                                            class: QuestionClass::IN,
-                                            ttl: 3600,
-                                            length: 4,
-                                            data: RData::A(Ipv4Addr::new(8, 8, 8, 8)),
-                                        });
-                                    }
-                                },
-                            }
-                            
-                            let response = UdpPacket {
-                                header,
-                                question: packet.question,
-                                answer: Some(answers),
-                            };
-                            if let Err(_) = tx_clone.send((response, source)).await {
-                                error!("Failed to send UDP response to async channel")
-                            }
-                        });
+                                let response = UdpPacket {
+                                    header,
+                                    question: packet.question,
+                                    answer: Some(answers),
+                                };
+                                if let Err(_) = tx_clone.send((response, source)).await {
+                                    error!("Failed to send UDP response to async channel")
+                                }
+                            });
+                        }
+                        Err(e) => {
+                            error!("Error receiving data: {}", e);
+                            break;
+                        }
                     }
-                    Err(e) => {
-                        error!("Error receiving data: {}", e);
-                        break;
-                    }
-                },
+                }
                 None => break,
             }
         }

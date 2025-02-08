@@ -29,7 +29,7 @@ impl From<String> for RData {
 impl From<Bytes> for RData {
     fn from(value: Bytes) -> Self {
         match value.len() {
-            4 => RData::A(Ipv4Addr::from(value.clone().get_u32())),  // TODO: Check if clone can be avoided.
+            4 => RData::A(Ipv4Addr::from(value.clone().get_u32())), // TODO: Check if clone can be avoided.
             _ => panic!("Unsupported RData type."),
         }
     }
@@ -93,9 +93,10 @@ impl<B: Buf> From<&mut B> for Answer {
                     }));
                 }
                 3 => {
-                    let pointer = ((value.get_u8() & 0b0011_1111) as u16) << 8 | value.get_u8() as u16;
+                    let pointer =
+                        ((value.get_u8() & 0b0011_1111) as u16) << 8 | value.get_u8() as u16;
                     labels.push(Label::Pointer(LabelPointer { pointer }));
-                    break
+                    break;
                 }
                 _ => panic!("Invalid Label"),
             }

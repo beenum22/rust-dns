@@ -169,9 +169,10 @@ impl<B: Buf> From<&mut B> for Question {
                     }));
                 }
                 3 => {
-                    let pointer = ((value.get_u8() & 0b0011_1111) as u16) << 8 | value.get_u8() as u16;
+                    let pointer =
+                        ((value.get_u8() & 0b0011_1111) as u16) << 8 | value.get_u8() as u16;
                     labels.push(Label::Pointer(LabelPointer { pointer }));
-                    break
+                    break;
                 }
                 _ => panic!("Invalid Label"),
             }
