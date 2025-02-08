@@ -1,6 +1,7 @@
-use bytes::{Bytes, BytesMut};
+use bytes::{Buf, Bytes, BytesMut};
+use log::debug;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub(crate) struct Header {
     pub(crate) id: u16,
     pub(crate) qdcount: u16,
@@ -73,28 +74,67 @@ impl From<Header> for Bytes {
     }
 }
 
-impl From<Bytes> for Header {
-    fn from(value: Bytes) -> Self {
-        if value.len() != 12 {
+impl<B: Buf> From<&mut B> for Header {
+    fn from(value: &mut B) -> Self {
+        if value.remaining() < 12 {
             panic!("Invalid header length");
         }
+        // debug!("Header Bytes: {:02X?}", value.chunk());
+        let id = value.get_u16();
+        let flags = value.get_u8();
+        let qr = (flags & 0b1000_0000) >> 7 != 0;
+        let opcode = (flags & 0b0111_1000) >> 3;
+        let aa = (flags & 0b0000_0100) >> 2 != 0;
+        let tc = (flags & 0b0000_0010) >> 1 != 0;
+        let rd = flags & 0b0000_0001 != 0;
+        let more_flags = value.get_u8();
+        let ra = (more_flags & 0b1000_0000) >> 7 != 0;
+        let z = (more_flags & 0b0111_0000) >> 4;
+        let rcode =  more_flags & 0b0000_1111;
+        let qdcount = value.get_u16();
+        let ancount = value.get_u16();
+        let nscount = value.get_u16();
+        let arcount = value.get_u16();
         Header {
-            id: u16::from_be_bytes([value[0], value[1]]),
-            qdcount: u16::from_be_bytes([value[4], value[5]]),
-            ancount: u16::from_be_bytes([value[6], value[7]]),
-            nscount: u16::from_be_bytes([value[8], value[9]]),
-            arcount: u16::from_be_bytes([value[10], value[11]]),
-            qr: (value[2] & 0b1000_0000) >> 7 != 0,
-            opcode: (value[2] & 0b0111_1000) >> 3,
-            aa: (value[2] & 0b0000_0100) >> 2 != 0,
-            tc: (value[2] & 0b0000_0010) >> 1 != 0,
-            rd: value[2] & 0b0000_0001 != 0,
-            ra: (value[3] & 0b1000_0000) >> 7 != 0,
-            z: (value[3] & 0b0111_0000) >> 4,
-            rcode: value[3] & 0b0000_1111,
+            id,
+            qdcount,
+            ancount,
+            nscount,
+            arcount,
+            qr,
+            opcode,
+            aa,
+            tc,
+            rd,
+            ra,
+            z,
+            rcode,
         }
     }
 }
+
+// impl From<Bytes> for Header {
+//     fn from(value: Bytes) -> Self {
+//         if value.len() != 12 {
+//             panic!("Invalid header length");
+//         }
+//         Header {
+//             id: u16::from_be_bytes([value[0], value[1]]),
+//             qdcount: u16::from_be_bytes([value[4], value[5]]),
+//             ancount: u16::from_be_bytes([value[6], value[7]]),
+//             nscount: u16::from_be_bytes([value[8], value[9]]),
+//             arcount: u16::from_be_bytes([value[10], value[11]]),
+//             qr: (value[2] & 0b1000_0000) >> 7 != 0,
+//             opcode: (value[2] & 0b0111_1000) >> 3,
+//             aa: (value[2] & 0b0000_0100) >> 2 != 0,
+//             tc: (value[2] & 0b0000_0010) >> 1 != 0,
+//             rd: value[2] & 0b0000_0001 != 0,
+//             ra: (value[3] & 0b1000_0000) >> 7 != 0,
+//             z: (value[3] & 0b0111_0000) >> 4,
+//             rcode: value[3] & 0b0000_1111,
+//         }
+//     }
+// }
 
 #[cfg(test)]
 mod header_tests {
@@ -143,7 +183,7 @@ mod header_tests {
             rcode: 0,
         };
         assert_eq!(
-            Header::from(Bytes::copy_from_slice(&bytes_sample)),
+            Header::from(&mut Bytes::copy_from_slice(&bytes_sample)),
             header_sample
         );
     }

@@ -1,9 +1,10 @@
-use bytes::{Bytes, BytesMut};
+use bytes::{Buf, Bytes, BytesMut};
+use log::debug;
 
-use crate::question::{Label, LabelSequence, QuestionClass, QuestionType};
+use crate::question::{Label, LabelPointer, LabelSequence, QuestionClass, QuestionType};
 use std::net::Ipv4Addr;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub(crate) enum RData {
     A(Ipv4Addr),
 }
@@ -21,12 +22,21 @@ impl From<String> for RData {
     fn from(value: String) -> Self {
         match value.parse::<Ipv4Addr>() {
             Ok(ip) => RData::A(ip),
-            Err(_) => panic!("Unsupported RData type"),
+            Err(e) => panic!("Unsupported RData type. ({}, {})", e, value),
         }
     }
 }
 
-#[derive(Debug, PartialEq)]
+impl From<Bytes> for RData {
+    fn from(value: Bytes) -> Self {
+        match value.len() {
+            4 => RData::A(Ipv4Addr::from(value.clone().get_u32())),  // TODO: Check if clone can be avoided.
+            _ => panic!("Unsupported RData type."),
+        }
+    }
+}
+
+#[derive(Debug, PartialEq, Clone)]
 pub(crate) struct Answer {
     pub(crate) name: Vec<Label>,
     pub(crate) typ: QuestionType,
@@ -63,10 +73,60 @@ impl Answer {
     }
 }
 
+impl<B: Buf> From<&mut B> for Answer {
+    fn from(value: &mut B) -> Self {
+        let mut index = 0;
+        let mut labels: Vec<Label> = Vec::new();
+        loop {
+            // let first_byte = value.get_u8();
+            let first_byte = value.chunk()[0];
+            match (first_byte & 0b1100_0000) >> 6 {
+                0 => {
+                    if first_byte == b'\0' {
+                        break;
+                    }
+                    let length = value.get_u8() as usize;
+                    let mut content = String::new();
+                    let label_bytes = value.copy_to_bytes(length).to_vec();
+                    content.push_str(String::from_utf8(label_bytes).unwrap().as_str()); // TODO: Handle errors here
+                    // value.advance(length);
+                    labels.push(Label::Sequence(LabelSequence {
+                        content,
+                        length: length as u8,
+                    }));
+                    index = length + index;
+                    // }
+                }
+                3 => {
+                    let pointer = ((value.get_u8() & 0b0011_1111) as u16) << 8 | value.get_u8() as u16;
+                    labels.push(Label::Pointer(LabelPointer { pointer }));
+                }
+                _ => panic!("Invalid Label"),
+            }
+        }
+        let typ = QuestionType::from(value.get_u16());
+        let class = QuestionClass::from(value.get_u16());
+        let ttl = value.get_u32();
+        let length = value.get_u16();
+        // let data = RData::from(String::from_utf8(value.chunk()[..length as usize].to_vec()).unwrap()); // TODO: Handle errors here
+        let data = RData::from(value.copy_to_bytes(length as usize));
+        // value.advance(length as usize);
+        // let data = RData::from(String::from_utf8(value.copy_to_bytes(length as usize).to_vec()).unwrap());
+        Answer {
+            name: labels,
+            typ,
+            class,
+            ttl,
+            length,
+            data,
+        }
+    }
+}
+
 impl From<Answer> for Bytes {
     fn from(value: Answer) -> Self {
         let mut bytes = BytesMut::new();
-        for label in value.name {
+        for label in &value.name {
             match label {
                 Label::Pointer(pointer) => {
                     bytes.extend_from_slice(&[0b1100_0000 | (pointer.pointer >> 8) as u8]);
@@ -78,7 +138,9 @@ impl From<Answer> for Bytes {
                 }
             }
         }
-        bytes.extend_from_slice(&[0]);
+        if let Label::Sequence(_) = value.name.last().unwrap() {
+            bytes.extend_from_slice(&[0])
+        }
         bytes.extend_from_slice(&Bytes::from(value.typ));
         bytes.extend_from_slice(&Bytes::from(value.class));
         bytes.extend_from_slice(&value.ttl.to_be_bytes());

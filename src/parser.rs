@@ -1,13 +1,14 @@
 use bytes::{Buf, Bytes};
+use log::debug;
 use tokio_util::codec::{Decoder, Encoder};
 
 use crate::{
-    answer::Answer,
+    answer::{self, Answer},
     header::Header,
     question::{self, Question},
 };
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub(crate) struct UdpPacket {
     pub(crate) header: Header,
     pub(crate) question: Vec<Question>,
@@ -31,17 +32,23 @@ impl Decoder for Parser {
             return Ok(None);
         };
         // TODO: Return None when invalid lengths
-        let header = Header::from(src.split_to(12).freeze());
+        let header = Header::from(&mut src.split_to(12).freeze());
         let mut questions = Vec::new();
+        let mut answers: Vec<Answer> = Vec::new();
 
         for _i in 0..header.qdcount {
-            questions.push(Question::from(src.clone()));
+            questions.push(Question::from(&mut *src));
         }
+
+        for _i in 0..header.ancount {
+            answers.push(Answer::from(&mut *src));
+        }
+
         src.advance(src.len());
         Ok(Some(UdpPacket {
             header,
             question: questions,
-            answer: None,
+            answer: Some(answers),
         }))
     }
 }

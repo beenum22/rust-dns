@@ -1,4 +1,5 @@
 use bytes::{Buf, Bytes, BytesMut};
+use log::debug;
 
 #[derive(Debug, PartialEq, Clone)]
 pub(crate) enum QuestionType {
@@ -126,7 +127,7 @@ impl From<Question> for Bytes {
     fn from(value: Question) -> Self {
         let mut bytes = BytesMut::new();
 
-        for label in value.qname {
+        for label in &value.qname {
             match label {
                 Label::Pointer(pointer) => {
                     bytes.extend_from_slice(&[0b1100_0000 | (pointer.pointer >> 8) as u8]);
@@ -138,18 +139,21 @@ impl From<Question> for Bytes {
                 }
             }
         }
-        bytes.extend_from_slice(&[0]);
+        if let Label::Sequence(_) = value.qname.last().unwrap() {
+            bytes.extend_from_slice(&[0])
+        }
         bytes.extend_from_slice(&Bytes::from(value.qtype));
         bytes.extend_from_slice(&Bytes::from(value.qclass));
         bytes.freeze()
     }
 }
 
-impl<B: Buf> From<B> for Question {
-    fn from(mut value: B) -> Self {
+impl<B: Buf> From<&mut B> for Question {
+    fn from(value: &mut B) -> Self {
         let mut index = 0;
         let mut labels: Vec<Label> = Vec::new();
-
+        // let mut labels_v2: HashMap<usize, Label> = HashMap::new();
+        // debug!("Question Bytes: {:02X?}", value.chunk());
         loop {
             let first_byte = value.get_u8();
             match (first_byte & 0b1100_0000) >> 6 {
@@ -159,8 +163,8 @@ impl<B: Buf> From<B> for Question {
                     }
                     let length = first_byte as usize;
                     let mut content = String::new();
-                    let label_bytes = value.copy_to_bytes(length);
-                    content.push_str(std::str::from_utf8(&label_bytes).unwrap()); // TODO: Handle errors here
+                    let label_bytes = value.copy_to_bytes(length).to_vec();
+                    content.push_str(String::from_utf8(label_bytes.to_vec()).unwrap().as_str()); // TODO: Handle errors here
                     labels.push(Label::Sequence(LabelSequence {
                         content,
                         length: length as u8,
@@ -175,6 +179,7 @@ impl<B: Buf> From<B> for Question {
                 _ => panic!("Invalid Label"),
             }
         }
+        // debug!("Question Bytes After Labels: {:02X?}", value.chunk());
         let qtype = QuestionType::from(value.get_u16());
         let qclass = QuestionClass::from(value.get_u16());
         Question {
@@ -354,7 +359,7 @@ mod question_tests {
             qclass: QuestionClass::IN,
         };
         assert_eq!(
-            Question::from(Bytes::copy_from_slice(&bytes_sample)),
+            Question::from(&mut Bytes::copy_from_slice(&bytes_sample)),
             question
         );
     }
