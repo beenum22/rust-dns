@@ -32,6 +32,7 @@ impl Decoder for Parser {
             return Ok(None);
         };
         // TODO: Return None when invalid lengths
+        debug!("DNS Request Bytes: {:02X?}", src.chunk());
         let header = Header::from(&mut src.split_to(12).freeze());
         let mut questions = Vec::new();
         let mut answers: Vec<Answer> = Vec::new();
@@ -69,6 +70,7 @@ impl Encoder<UdpPacket> for Parser {
             }
             None => (),
         }
+        debug!("DNS Response Bytes: {:02X?}", dst.chunk());
         Ok(())
     }
 }

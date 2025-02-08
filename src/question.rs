@@ -153,7 +153,7 @@ impl<B: Buf> From<&mut B> for Question {
         let mut index = 0;
         let mut labels: Vec<Label> = Vec::new();
         // let mut labels_v2: HashMap<usize, Label> = HashMap::new();
-        debug!("Question Bytes: {:02X?}", value.chunk());
+        // debug!("Question Bytes: {:02X?}", value.chunk());
         loop {
             // let first_byte = value.get_u8();
             let first_byte = value.chunk()[0];
@@ -182,7 +182,7 @@ impl<B: Buf> From<&mut B> for Question {
                 _ => panic!("Invalid Label"),
             }
         }
-        debug!("Question Bytes After Labels: {:02X?}", value.chunk());
+        // debug!("Question Bytes After Labels: {:02X?}", value.chunk());
         let qtype = QuestionType::from(value.get_u16());
         let qclass = QuestionClass::from(value.get_u16());
         Question {

@@ -77,7 +77,7 @@ impl<B: Buf> From<&mut B> for Answer {
     fn from(value: &mut B) -> Self {
         let mut index = 0;
         let mut labels: Vec<Label> = Vec::new();
-        debug!("Answer Bytes: {:02X?}", value.chunk());
+        // debug!("Answer Bytes: {:02X?}", value.chunk());
         loop {
             // let first_byte = value.get_u8();
             let first_byte = value.chunk()[0];
@@ -107,7 +107,7 @@ impl<B: Buf> From<&mut B> for Answer {
                 _ => panic!("Invalid Label"),
             }
         }
-        debug!("Answer Bytes After Labels: {:02X?}", value.chunk());
+        // debug!("Answer Bytes After Labels: {:02X?}", value.chunk());
         let typ = QuestionType::from(value.get_u16());
         let class = QuestionClass::from(value.get_u16());
         let ttl = value.get_u32();
