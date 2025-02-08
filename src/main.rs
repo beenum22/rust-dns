@@ -20,7 +20,7 @@ struct Cli {
     #[arg(long)]
     resolver: Option<String>,
 
-    #[arg(short, long, default_value = "debug")]
+    #[arg(short, long, default_value = "info")]
     loglevel: String,
 }
 

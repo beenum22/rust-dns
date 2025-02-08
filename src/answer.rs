@@ -1,5 +1,4 @@
 use bytes::{Buf, Bytes, BytesMut};
-use log::debug;
 
 use crate::question::{Label, LabelPointer, LabelSequence, QuestionClass, QuestionType};
 use std::net::Ipv4Addr;
@@ -75,11 +74,8 @@ impl Answer {
 
 impl<B: Buf> From<&mut B> for Answer {
     fn from(value: &mut B) -> Self {
-        let mut index = 0;
         let mut labels: Vec<Label> = Vec::new();
-        // debug!("Answer Bytes: {:02X?}", value.chunk());
         loop {
-            // let first_byte = value.get_u8();
             let first_byte = value.chunk()[0];
             match (first_byte & 0b1100_0000) >> 6 {
                 0 => {
@@ -91,13 +87,10 @@ impl<B: Buf> From<&mut B> for Answer {
                     let mut content = String::new();
                     let label_bytes = value.copy_to_bytes(length).to_vec();
                     content.push_str(String::from_utf8(label_bytes).unwrap().as_str()); // TODO: Handle errors here
-                    // value.advance(length);
                     labels.push(Label::Sequence(LabelSequence {
                         content,
                         length: length as u8,
                     }));
-                    index = length + index;
-                    // }
                 }
                 3 => {
                     let pointer = ((value.get_u8() & 0b0011_1111) as u16) << 8 | value.get_u8() as u16;
@@ -107,15 +100,11 @@ impl<B: Buf> From<&mut B> for Answer {
                 _ => panic!("Invalid Label"),
             }
         }
-        // debug!("Answer Bytes After Labels: {:02X?}", value.chunk());
         let typ = QuestionType::from(value.get_u16());
         let class = QuestionClass::from(value.get_u16());
         let ttl = value.get_u32();
         let length = value.get_u16();
-        // let data = RData::from(String::from_utf8(value.chunk()[..length as usize].to_vec()).unwrap()); // TODO: Handle errors here
         let data = RData::from(value.copy_to_bytes(length as usize));
-        // value.advance(length as usize);
-        // let data = RData::from(String::from_utf8(value.copy_to_bytes(length as usize).to_vec()).unwrap());
         Answer {
             name: labels,
             typ,

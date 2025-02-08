@@ -1,5 +1,4 @@
 use bytes::{Buf, Bytes, BytesMut};
-use log::debug;
 
 #[derive(Debug, PartialEq, Clone)]
 pub(crate) struct Header {
@@ -79,7 +78,6 @@ impl<B: Buf> From<&mut B> for Header {
         if value.remaining() < 12 {
             panic!("Invalid header length");
         }
-        // debug!("Header Bytes: {:02X?}", value.chunk());
         let id = value.get_u16();
         let flags = value.get_u8();
         let qr = (flags & 0b1000_0000) >> 7 != 0;
@@ -112,29 +110,6 @@ impl<B: Buf> From<&mut B> for Header {
         }
     }
 }
-
-// impl From<Bytes> for Header {
-//     fn from(value: Bytes) -> Self {
-//         if value.len() != 12 {
-//             panic!("Invalid header length");
-//         }
-//         Header {
-//             id: u16::from_be_bytes([value[0], value[1]]),
-//             qdcount: u16::from_be_bytes([value[4], value[5]]),
-//             ancount: u16::from_be_bytes([value[6], value[7]]),
-//             nscount: u16::from_be_bytes([value[8], value[9]]),
-//             arcount: u16::from_be_bytes([value[10], value[11]]),
-//             qr: (value[2] & 0b1000_0000) >> 7 != 0,
-//             opcode: (value[2] & 0b0111_1000) >> 3,
-//             aa: (value[2] & 0b0000_0100) >> 2 != 0,
-//             tc: (value[2] & 0b0000_0010) >> 1 != 0,
-//             rd: value[2] & 0b0000_0001 != 0,
-//             ra: (value[3] & 0b1000_0000) >> 7 != 0,
-//             z: (value[3] & 0b0111_0000) >> 4,
-//             rcode: value[3] & 0b0000_1111,
-//         }
-//     }
-// }
 
 #[cfg(test)]
 mod header_tests {

@@ -123,6 +123,7 @@ impl DnsServer {
                                                     answers = ans;
                                                 }
                                                 header = upstream_packet.header;
+                                                // Note: This portion is added because YC9 (?) codecraftors tests were failing after resolver enable.
                                                 if header.ancount == 0 {
                                                     header.qdcount = packet.header.qdcount;
                                                     header.ancount = packet.header.qdcount;
