@@ -123,6 +123,18 @@ impl DnsServer {
                                                     answers = ans;
                                                 }
                                                 header = upstream_packet.header;
+                                                if header.ancount == 0 {
+                                                    for q in &packet.question {
+                                                        answers.push(Answer {
+                                                            name: q.qname.clone(),
+                                                            typ: QuestionType::A,
+                                                            class: QuestionClass::IN,
+                                                            ttl: 3600,
+                                                            length: 4,
+                                                            data: RData::A(Ipv4Addr::new(8, 8, 8, 8)),
+                                                        });
+                                                    }
+                                                }
                                             },
                                             Err(_) => error!("Failed to parse response from the upstream server"),
                                         }
