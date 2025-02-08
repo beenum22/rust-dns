@@ -84,6 +84,7 @@ impl<B: Buf> From<&mut B> for Answer {
             match (first_byte & 0b1100_0000) >> 6 {
                 0 => {
                     if first_byte == b'\0' {
+                        value.advance(1);
                         break;
                     }
                     let length = value.get_u8() as usize;
@@ -101,10 +102,12 @@ impl<B: Buf> From<&mut B> for Answer {
                 3 => {
                     let pointer = ((value.get_u8() & 0b0011_1111) as u16) << 8 | value.get_u8() as u16;
                     labels.push(Label::Pointer(LabelPointer { pointer }));
+                    break
                 }
                 _ => panic!("Invalid Label"),
             }
         }
+        debug!("Answer Bytes After Labels: {:02X?}", value.chunk());
         let typ = QuestionType::from(value.get_u16());
         let class = QuestionClass::from(value.get_u16());
         let ttl = value.get_u32();

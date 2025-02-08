@@ -155,13 +155,15 @@ impl<B: Buf> From<&mut B> for Question {
         // let mut labels_v2: HashMap<usize, Label> = HashMap::new();
         debug!("Question Bytes: {:02X?}", value.chunk());
         loop {
-            let first_byte = value.get_u8();
+            // let first_byte = value.get_u8();
+            let first_byte = value.chunk()[0];
             match (first_byte & 0b1100_0000) >> 6 {
                 0 => {
                     if first_byte == b'\0' {
+                        value.advance(1);
                         break;
                     }
-                    let length = first_byte as usize;
+                    let length = value.get_u8() as usize;
                     let mut content = String::new();
                     let label_bytes = value.copy_to_bytes(length).to_vec();
                     content.push_str(String::from_utf8(label_bytes.to_vec()).unwrap().as_str()); // TODO: Handle errors here
@@ -173,13 +175,14 @@ impl<B: Buf> From<&mut B> for Question {
                     // }
                 }
                 3 => {
-                    let pointer = ((first_byte & 0b0011_1111) as u16) << 8 | value.get_u8() as u16;
+                    let pointer = ((value.get_u8() & 0b0011_1111) as u16) << 8 | value.get_u8() as u16;
                     labels.push(Label::Pointer(LabelPointer { pointer }));
+                    break
                 }
                 _ => panic!("Invalid Label"),
             }
         }
-        // debug!("Question Bytes After Labels: {:02X?}", value.chunk());
+        debug!("Question Bytes After Labels: {:02X?}", value.chunk());
         let qtype = QuestionType::from(value.get_u16());
         let qclass = QuestionClass::from(value.get_u16());
         Question {
